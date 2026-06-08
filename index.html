@@ -824,6 +824,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <div id="ced_shared_info_u1" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--dim);margin-bottom:7px">C&#233;dule U1</div>
       <div id="ced_shared_info_u2" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--dim);margin-bottom:7px;display:none">C&#233;dule U2</div>
       <div id="ced_shared_info_u3" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--dim);margin-bottom:7px;display:none">C&#233;dule U3</div>
+      <div style="margin-bottom:8px"><button class="ced-btn dl" style="background:rgba(59,130,246,.1);color:var(--blue);border-color:rgba(59,130,246,.3)" onclick="histOpen()">&#128336; Voir l'historique (14 jours)</button></div>
 
       <!-- Outils gestionnaire (masqués jusqu'au déverrouillage) -->
       <div id="mgr-tools" style="display:none">
@@ -1959,6 +1960,183 @@ function sbStartAutoRefresh(){
       }
     });
   }, 8000); // refresh every 8 seconds
+}
+
+// ── Archivage quotidien automatique ──────────────────────
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// Crée une copie figée de chaque usine si pas déjà fait aujourd'hui
+function sbDailyArchive(){
+  if(!sbConnected) return;
+  var jour = todayStr();
+  ['u1','u2','u3'].forEach(function(u){
+    // Vérifie si une copie existe déjà pour aujourd'hui
+    sbClient.from('cedule_historique').select('id').eq('usine',u).eq('jour',jour).maybeSingle()
+      .then(function(res){
+        if(res.data) return; // déjà archivé aujourd'hui
+        // Récupère la cédule actuelle de cette usine et l'archive
+        sbClient.from('cedules').select('data').eq('usine',u).maybeSingle()
+          .then(function(cres){
+            if(!cres.data || !cres.data.data) return;
+            var d = cres.data.data;
+            // N'archive pas une cédule vide
+            var hasContent = (d.asm&&d.asm.length)||(d.soud&&d.soud.length)||(d.mach&&(['drill','plasma','angle'].some(function(m){return d.mach[m]&&d.mach[m].length;})));
+            if(!hasContent) return;
+            sbClient.from('cedule_historique').insert({usine:u, jour:jour, data:d}).then(function(){});
+          });
+      });
+  });
+  // Nettoyage : supprime les copies de plus de 14 jours
+  var cutoff = new Date();
+  cutoff.setDate(cutoff.getDate()-14);
+  var cutoffStr = cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
+  sbClient.from('cedule_historique').delete().lt('jour',cutoffStr).then(function(){});
+}
+
+// ── Auto-retrait des séquences à 100% après 24h ──────────
+// Pose un horodatage quand une ligne atteint 100%, retire après 24h.
+// Géré par département (asm, soud) et par machine CN (drill, plasma, angle).
+function ced100Cleanup(){
+  if(!cedData.notes) cedData.notes={};
+  if(!cedData._done100) cedData._done100={};
+  var now = Date.now();
+  var DAY = 24*3600*1000;
+  var changed = false;
+  var toRemove = {asm:[], soud:[], drill:[], plasma:[], angle:[]};
+
+  // Projets Assemblage / Soudure
+  ['asm','soud'].forEach(function(sk){
+    var arr = cedData[sk]||[];
+    arr.forEach(function(row,ri){
+      var pct = (cedData.notes['pct_'+sk+'_'+ri]!==undefined)
+                ? parseInt(cedData.notes['pct_'+sk+'_'+ri])
+                : (parseInt(row['Avanc. Est.'])||0);
+      var dkey = sk+'_'+ri;
+      if(pct>=100){
+        if(!cedData._done100[dkey]){ cedData._done100[dkey]=now; changed=true; }
+        else if(now - cedData._done100[dkey] >= DAY){ toRemove[sk].push(ri); }
+      } else {
+        // Redescendu sous 100% → annule le compte à rebours
+        if(cedData._done100[dkey]){ delete cedData._done100[dkey]; changed=true; }
+      }
+    });
+  });
+
+  // Machines CN
+  ['drill','plasma','angle'].forEach(function(mk){
+    var arr = (cedData.mach&&cedData.mach[mk])||[];
+    arr.forEach(function(row,ri){
+      var pct = (cedData.notes['mpct_'+mk+'_'+ri]!==undefined)
+                ? parseInt(cedData.notes['mpct_'+mk+'_'+ri])
+                : Math.round(row.pct<=1?row.pct*100:row.pct);
+      var dkey = mk+'_'+ri;
+      if(pct>=100){
+        if(!cedData._done100[dkey]){ cedData._done100[dkey]=now; changed=true; }
+        else if(now - cedData._done100[dkey] >= DAY){ toRemove[mk].push(ri); }
+      } else {
+        if(cedData._done100[dkey]){ delete cedData._done100[dkey]; changed=true; }
+      }
+    });
+  });
+
+  // Effectue les retraits (de la fin vers le début pour préserver les index)
+  var didRemove = false;
+  ['asm','soud'].forEach(function(sk){
+    toRemove[sk].sort(function(a,b){return b-a;}).forEach(function(ri){
+      cedData[sk].splice(ri,1);
+      reindexNotes(sk, ri, ['pct','c','p']);
+      delete cedData._done100[sk+'_'+ri];
+      didRemove=true;
+    });
+  });
+  ['drill','plasma','angle'].forEach(function(mk){
+    toRemove[mk].sort(function(a,b){return b-a;}).forEach(function(ri){
+      cedData.mach[mk].splice(ri,1);
+      reindexNotes(mk, ri, ['mpct','mnote']);
+      delete cedData._done100[mk+'_'+ri];
+      didRemove=true;
+    });
+  });
+
+  if(changed || didRemove){
+    cedSaveLocal();
+    if(didRemove) cedRender();
+  }
+}
+
+// Réindexe les notes après suppression d'une ligne
+function reindexNotes(sk, removedRi, prefixes){
+  if(!cedData.notes) return;
+  var newNotes={};
+  Object.keys(cedData.notes).forEach(function(key){
+    var matched=false;
+    for(var pi=0;pi<prefixes.length;pi++){
+      var pfx=prefixes[pi];
+      var re=new RegExp('^'+pfx+'_'+sk+'_(\\d+)$');
+      var m=key.match(re);
+      if(m){
+        matched=true;
+        var idx=parseInt(m[1]);
+        if(idx<removedRi) newNotes[key]=cedData.notes[key];
+        else if(idx>removedRi) newNotes[pfx+'_'+sk+'_'+(idx-1)]=cedData.notes[key];
+        break;
+      }
+    }
+    if(!matched) newNotes[key]=cedData.notes[key];
+  });
+  cedData.notes=newNotes;
+}
+
+// ── Visualiseur d'historique ─────────────────────────────
+var histData = {};
+function histOpen(){
+  document.getElementById('hist-modal').style.display='flex';
+  document.getElementById('hist-usine').value = cedCurrentUsine||'u1';
+  histLoad();
+}
+function histLoad(){
+  var u = document.getElementById('hist-usine').value;
+  var sel = document.getElementById('hist-jour');
+  var content = document.getElementById('hist-content');
+  if(!sbConnected){
+    content.textContent='La base partag\u00e9e n\'est pas disponible (mode local). L\'historique n\u00e9cessite la connexion Supabase.';
+    return;
+  }
+  content.textContent='Chargement...';
+  sel.innerHTML='<option value="">\u2014 Choisir une date \u2014</option>';
+  sbClient.from('cedule_historique').select('jour,data,created_at').eq('usine',u).order('jour',{ascending:false})
+    .then(function(res){
+      if(res.error||!res.data||!res.data.length){
+        content.textContent='Aucune copie archiv\u00e9e pour cette usine pour l\'instant. Les copies se cr\u00e9ent automatiquement une fois par jour.';
+        return;
+      }
+      histData={};
+      res.data.forEach(function(row){
+        histData[row.jour]=row.data;
+        var opt=document.createElement('option');
+        opt.value=row.jour;
+        var d=new Date(row.jour+'T12:00:00');
+        opt.textContent=d.toLocaleDateString('fr-CA',{weekday:'long',day:'numeric',month:'long'});
+        sel.appendChild(opt);
+      });
+      content.textContent='Choisis une date ci-dessus ('+res.data.length+' copie(s) disponible(s)).';
+    })
+    .catch(function(){ content.textContent='Erreur de chargement de l\'historique.'; });
+}
+function histShowDay(){
+  var jour = document.getElementById('hist-jour').value;
+  var content = document.getElementById('hist-content');
+  if(!jour || !histData[jour]){ content.textContent='Choisis une date.'; return; }
+  var u = document.getElementById('hist-usine').value;
+  var saved = cedData, savedU = cedCurrentUsine, savedCtx = cedUsineCtx;
+  cedData = histData[jour];
+  cedCurrentUsine = u; cedUsineCtx = u;
+  var lines = getCedSection();
+  cedData = saved; cedCurrentUsine = savedU; cedUsineCtx = savedCtx;
+  content.textContent = lines.length ? lines.join('\n') : 'C\u00e9dule vide ce jour-l\u00e0.';
 }
 
 function cedSaveLocal(){
@@ -3173,11 +3351,38 @@ function cedLoadShared(u) {
   if(sbInit()){
     sbStatus('\u2713 Connect\u00e9 \u00e0 la base partag\u00e9e','var(--green)');
     sbStartAutoRefresh();
+    setTimeout(sbDailyArchive, 3000);           // archive quotidien au démarrage
+    setInterval(sbDailyArchive, 6*3600*1000);   // re-vérifie aux 6h (si app reste ouverte)
+    setInterval(ced100Cleanup, 10*60*1000);     // vérifie les 100% aux 10 min
+    setTimeout(ced100Cleanup, 5000);            // une 1re passe au démarrage
   } else {
     sbStatus('\u26a0 Mode local (base partag\u00e9e non disponible)','var(--yellow)');
+    setInterval(ced100Cleanup, 10*60*1000);
+    setTimeout(ced100Cleanup, 5000);
   }
 })();
 </script>
+<!-- HISTORIQUE MODAL -->
+<div id="hist-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1e2130;border:1px solid #333;border-radius:12px;max-width:900px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="padding:14px 16px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:700;color:#e2e8f0">&#128336; Historique des c&#233;dules (14 derniers jours)</span>
+      <button onclick="document.getElementById('hist-modal').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid #333;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="hist-usine" onchange="histLoad()" style="background:#14171f;border:1px solid #444;color:#e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;font-family:'IBM Plex Sans',sans-serif">
+        <option value="u1">Usine 1</option>
+        <option value="u2">Usine 2</option>
+        <option value="u3">Usine 3</option>
+      </select>
+      <select id="hist-jour" onchange="histShowDay()" style="background:#14171f;border:1px solid #444;color:#e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;flex:1;min-width:160px">
+        <option value="">— Choisir une date —</option>
+      </select>
+    </div>
+    <div id="hist-content" style="padding:16px;overflow-y:auto;flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#cbd5e1;white-space:pre-wrap;line-height:1.5">Choisis une usine et une date.</div>
+  </div>
+</div>
+
 <!-- STARTUP MODAL -->
 <div id="startup-modal" style="display:flex;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:20px">
   <div style="background:#1e2130;border:1px solid #333;border-radius:12px;padding:0;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)">
