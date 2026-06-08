@@ -2265,26 +2265,41 @@ function cedParseAll(wb) {
 
 function cedParseGeneric(ws) {
   var rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, dateNF:'YYYY-MM-DD'});
-  var hdrIdx = rows.findIndex(function(r){return r&&r.some(function(c){return String(c||'').trim()==='Prio';});});
+  var hdrIdx = rows.findIndex(function(r){return r&&r.some(function(c){var s=String(c||'').trim().replace(/^#/,'');return s==='Prio';});});
   if(hdrIdx<0) return [];
-  var hdr = rows[hdrIdx];
+  var hdr = rows[hdrIdx].map(function(h){return String(h||'').trim().replace(/^#/,'');});
   var data = [];
   for(var i=hdrIdx+1;i<rows.length;i++) {
-    var r=rows[i]; if(!r||!r[0]) continue;
+    var r=rows[i]; if(!r||(!r[0]&&!r[1])) continue;
     var obj={};
-    hdr.forEach(function(h,j){if(h)obj[String(h).trim()]=r[j]!==undefined?r[j]:'';});
+    hdr.forEach(function(h,j){if(h)obj[h]=r[j]!==undefined?r[j]:'';});
+    obj['Projet']=cedCleanProj(obj['Projet']);
+    if(!obj['Projet']) continue;
+    // Normalize date column: "Date fin prod." → "Date fin prod"
+    if(obj['Date fin prod.']!==undefined && obj['Date fin prod']===undefined) obj['Date fin prod']=obj['Date fin prod.'];
     var av=obj['Avanc. Est.']; if(av!==undefined&&av!==''){var n=parseFloat(String(av).replace(',','.'));obj['Avanc. Est.']=isNaN(n)?0:(n<=1?Math.round(n*100):Math.round(n));}else obj['Avanc. Est.']=0;
     data.push(obj);
   }
   return data;
 }
 
+// Nettoie un numéro de projet, y compris le cas corrompu "1504:27:00" → "1504:27"
+function cedCleanProj(v){
+  if(v===undefined||v===null) return '';
+  var s=String(v).trim();
+  if(!s) return '';
+  // Cas corrompu : ERP a formaté "1504:27" comme durée → "1504:27:00"
+  // Retire un ":00" final si le format ressemble à NNNN:NN:00
+  s=s.replace(/^(\d+:\d+):00$/,'$1');
+  return s;
+}
+
 function cedParsePrep(ws) {
   var rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:false, dateNF:'YYYY-MM-DD'});
-  var hdrIdx = rows.findIndex(function(r){return r&&r.some(function(c){return String(c||'').trim()==='Prio';});});
+  var hdrIdx = rows.findIndex(function(r){return r&&r.some(function(c){var s=String(c||'').trim().replace(/^#/,'');return s==='Prio';});});
   if(hdrIdx>=0) {
-    var hdr=rows[hdrIdx]; cedData.prep=[];
-    for(var i=hdrIdx+1;i<rows.length;i++){var r=rows[i];if(!r||!r[0])break;var obj={};hdr.forEach(function(h,j){if(h)obj[String(h).trim()]=r[j]!==undefined?r[j]:'';});var av=obj['Avanc. Est.'];if(av!==undefined&&av!==''){var n=parseFloat(String(av).replace(',','.'));obj['Avanc. Est.']=isNaN(n)?0:(n<=1?Math.round(n*100):Math.round(n));}else obj['Avanc. Est.']=0;cedData.prep.push(obj);}
+    var hdr=rows[hdrIdx].map(function(h){return String(h||'').trim().replace(/^#/,'');}); cedData.prep=[];
+    for(var i=hdrIdx+1;i<rows.length;i++){var r=rows[i];if(!r||(!r[0]&&!r[1]))break;var obj={};hdr.forEach(function(h,j){if(h)obj[h]=r[j]!==undefined?r[j]:'';});obj['Projet']=cedCleanProj(obj['Projet']);var av=obj['Avanc. Est.'];if(av!==undefined&&av!==''){var n=parseFloat(String(av).replace(',','.'));obj['Avanc. Est.']=isNaN(n)?0:(n<=1?Math.round(n*100):Math.round(n));}else obj['Avanc. Est.']=0;cedData.prep.push(obj);}
   }
   // NB JOUR ASS — collect all occurrences per usine in order (first=plasma, second=angle)
   cedData.kpi={u1p:0,u1a:0,u2p:0,u2a:0,u3p:0,u3a:0};
