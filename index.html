@@ -254,10 +254,14 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .mach-sub{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
 .mach-date{font-size:10px;color:var(--dim);}
 .ced-empty{text-align:center;padding:40px 20px;color:var(--dim);}
-/* ===== GRAND ÉCRAN : limiter la largeur pour confort de lecture ===== */
+/* ===== GRAND ÉCRAN : utiliser toute la largeur ===== */
+@media(min-width:1200px){
+  .ced-wrap{padding:11px 20px;}
+  .ced-wrap > div, .id-bar, .sec{width:auto;max-width:none;align-self:stretch;}
+}
 @media(min-width:1500px){
-  .topbar, .id-bar, .sec, .gen-bar, .ced-gen-bar{max-width:1480px;margin-left:auto;margin-right:auto;}
-  .topbar{border-radius:0;}
+  .ced-tbl{font-size:13px;}
+  .id-inp, .note-inp{font-size:14px;}
 }
 /* ===== TABLETTE (portrait et petit paysage) ===== */
 @media(min-width:501px) and (max-width:1024px){
