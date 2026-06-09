@@ -254,15 +254,32 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .mach-sub{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
 .mach-date{font-size:10px;color:var(--dim);}
 .ced-empty{text-align:center;padding:40px 20px;color:var(--dim);}
-@media(max-width:500px){
-  .mach-grid{grid-template-columns:1fr;}
-  .kpi-grid{grid-template-columns:1fr;}
+/* ===== GRAND ÉCRAN : limiter la largeur pour confort de lecture ===== */
+@media(min-width:1500px){
+  .topbar, .id-bar, .sec, .gen-bar, .ced-gen-bar{max-width:1480px;margin-left:auto;margin-right:auto;}
+  .topbar{border-radius:0;}
+}
+/* ===== TABLETTE (portrait et petit paysage) ===== */
+@media(min-width:501px) and (max-width:1024px){
+  .mach-grid{grid-template-columns:1fr;}        /* machines empilées = plus lisible */
+  .kpi-grid{grid-template-columns:repeat(3,1fr);}
   .mach-col{border-right:none;border-bottom:1px solid var(--border);}
-  /* Topbar compact */
+  .ced-tbl{font-size:12px;}
+  .ced-tbl-wrap{-webkit-overflow-scrolling:touch;}
+}
+/* ===== TABLETTE PORTRAIT ÉTROITE ===== */
+@media(min-width:501px) and (max-width:740px){
+  .kpi-grid{grid-template-columns:1fr;}
+  .id-bar{flex-wrap:wrap;}
+}
+@media(max-width:500px){
+  .dash-grid{grid-template-columns:1fr !important;}
+  .tb-right{flex-wrap:wrap;justify-content:flex-end;gap:4px;}
   .topbar{flex-wrap:wrap;padding:7px 9px;gap:4px;}
-  .tb-title{font-size:14px;}
-  .tb-sub{font-size:10px;}
-  .nb{padding:5px 8px;font-size:11px;}
+  .tb-left svg{width:26px !important;height:26px !important;}
+  .tb-title{font-size:13px;}
+  .tb-sub{font-size:9px;}
+  .nb{padding:5px 7px;font-size:11px;}
   /* Identity bar stacks */
   .id-bar{margin:8px 9px 0;flex-direction:column;align-items:stretch;gap:7px;}
   .id-f{min-width:0;}
@@ -334,17 +351,20 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 <div id="app">
 
 <div class="topbar">
-  <div class="tb-left">
+  <div class="tb-left" style="flex-direction:row;align-items:center;gap:10px">
+    <svg width="34" height="34" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect x="6" y="6" width="88" height="13" fill="#d11f1f"/><rect x="6" y="23" width="88" height="71" fill="#111"/><text x="50" y="74" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="#fff" text-anchor="middle">BA</text></svg>
+    <div style="display:flex;flex-direction:column;min-width:0">
     <div class="tb-title">Tervene <span class="usine-badge">USINE 2</span></div>
     <div class="tb-sub" id="tb-sub">Transition de quart</div>
+    </div>
   </div>
   <div class="tb-right">
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">&#127769;</button>
-    <button class="nb active" id="nav-u1" onclick="showView('u1')">U1</button>
-    <button class="nb u2nb" id="nav-u2" onclick="showView('u2')">U2</button>
-    <button class="nb" id="nav-u3" onclick="showView('u3')" style="border-color:var(--purple)">U3</button>
-    <button class="nb" id="nav-hist" onclick="showView('hist')">&#128336;</button>
-    <button class="nb" id="nav-ced" onclick="showView('ced')">&#128202; C&#233;dule</button>
+    <button class="nb active" id="nav-u1" onclick="navUsine('u1')">U1</button>
+    <button class="nb u2nb" id="nav-u2" onclick="navUsine('u2')">U2</button>
+    <button class="nb" id="nav-u3" onclick="navUsine('u3')" style="border-color:var(--purple)">U3</button>
+    <button class="nb" id="nav-hist" onclick="histOpen()">&#128336;</button>
+    <button class="nb" id="nav-dash" onclick="dashOpen()" title="Tableau de bord 3 usines">&#128202;</button>
     <button class="nb" id="nav-vl" onclick="openVL()">&#127908;&#9881;</button>
   </div>
 </div>
@@ -741,7 +761,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     <div class="sbody" id="u3_livch">
       <div style="font-size:11px;color:var(--dim);margin-bottom:3px">Projets dont la date de livraison chantier approche.</div>
       <div id="u3lr"><div class="livr-row"><div class="fw"><div class="fl">Projet</div><div class="fr"><input id="u3lp0" type="text"><button class="mic" onclick="doMic('u3lp0',this,'u3')">&#127908;</button></div></div><div class="fw"><div class="fl">Date chantier</div><input id="u3ld0" type="text" style="padding:7px 9px;border:1px solid var(--border);background:var(--bg);color:var(--bright);border-radius:6px;font-size:14px;width:100%"></div><div class="fw"><div class="fl">Ecart / Statut</div><div class="fr"><input id="u3ls0" type="text"><button class="mic" onclick="doMic('u3ls0',this,'u3')">&#127908;</button></div></div></div></div>
-      <button class="ladd" onclick="addL('u3')">+ Ajouter un projet</button>
+      <button class="ladd" onclick="addLivr('u3')">+ Ajouter un projet</button>
     </div>
   </div>
 
@@ -824,7 +844,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <div id="ced_shared_info_u1" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--dim);margin-bottom:7px">C&#233;dule U1</div>
       <div id="ced_shared_info_u2" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--dim);margin-bottom:7px;display:none">C&#233;dule U2</div>
       <div id="ced_shared_info_u3" style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--dim);margin-bottom:7px;display:none">C&#233;dule U3</div>
-      <div style="margin-bottom:8px"><button class="ced-btn dl" style="background:rgba(59,130,246,.1);color:var(--blue);border-color:rgba(59,130,246,.3)" onclick="histOpen()">&#128336; Voir l'historique (14 jours)</button></div>
+      <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="ced-btn dl" style="background:rgba(59,130,246,.1);color:var(--blue);border-color:rgba(59,130,246,.3)" onclick="histOpen()">&#128336; Voir l'historique (14 jours)</button><button class="ced-btn dl" style="background:rgba(107,122,153,.12);color:var(--bright);border-color:var(--border)" onclick="cedPrint()">&#128424; Imprimer la c&#233;dule</button><button class="ced-btn dl" style="background:rgba(168,85,247,.1);color:var(--purple);border-color:rgba(168,85,247,.3)" onclick="shiftSummary()">&#128203; Bilan de quart</button></div>
 
       <!-- Outils gestionnaire (masqués jusqu'au déverrouillage) -->
       <div id="mgr-tools" style="display:none">
@@ -877,6 +897,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       <div class="sh" onclick="tog('ced_viewer')"><span class="si">&#128202;</span><span class="st">C&#233;dule — r&#233;f&#233;rence et avancement</span><span class="sb b-tel">C&#201;DULE</span><span class="cv" id="ced_viewer_cv">&#9660;</span></div>
       <div class="sbody" id="ced_viewer">
         <div id="ced-content" style="display:none">
+          <div id="ced-banner" style="margin-bottom:8px"></div>
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);font-family:'IBM Plex Mono',monospace;margin-bottom:6px" id="ced-file-name">Aucune c&#233;dule charg&#233;e</div>
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--dim);font-family:'IBM Plex Mono',monospace;margin-bottom:5px">NB Jours connexions disponibles</div>
           <div class="kpi-grid" id="ced-kpi"></div>
@@ -1137,6 +1158,25 @@ var PRESET = {
 // ═══════════════════════════════════════════
 //  NAVIGATION
 // ═══════════════════════════════════════════
+// navUsine — un seul onglet par usine : la cédule devient le hub central
+// Clic sur U1/U2/U3 = ouvre la cédule de cette usine + active le bon bouton
+function navUsine(u){
+  // Cacher le popup de démarrage s'il est visible
+  var sm=document.getElementById('startup-modal'); if(sm) sm.style.display='none';
+  // Basculer vers la vue cédule
+  showView('ced');
+  // Définir le contexte usine et charger sa cédule
+  cedPickUsine(u);
+  cedPickUsineUpload(u);
+  cedRestoreLocal();
+  // Activer le bon bouton de nav en haut
+  ['u1','u2','u3'].forEach(function(x){
+    var b=document.getElementById('nav-'+x); if(b) b.classList.toggle('active', x===u);
+  });
+  // Mettre à jour le sous-titre
+  var sub=document.getElementById('tb-sub'); if(sub) sub.textContent='Cédule — '+u.toUpperCase();
+}
+
 function showView(n) {
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
   ['u1','u2','u3','hist','ced'].forEach(function(x){var b=document.getElementById('nav-'+x);if(b)b.classList.remove('active');});
@@ -1927,6 +1967,8 @@ function sbPush(u){
   if(sbPushTimer) clearTimeout(sbPushTimer);
   sbPushTimer = setTimeout(function(){
     var by = gv('ced_nom') || (mgrMode?'Gestionnaire':'Contremaitre');
+    cedData._updatedAt = new Date().toISOString();
+    cedData._updatedBy = by;
     sbClient.from('cedules').upsert({
       usine: u,
       data: cedData,
@@ -1943,6 +1985,8 @@ function sbPush(u){
 function sbStartAutoRefresh(){
   setInterval(function(){
     if(!sbConnected || sbSyncing) return;
+    // Ne jamais écraser pendant que le gestionnaire réorganise la cédule
+    if(mgrMode) return;
     var u = cedCurrentUsine || 'u1';
     sbPull(u, function(remote){
       if(!remote || !remote.data) return;
@@ -2090,8 +2134,264 @@ function reindexNotes(sk, removedRi, prefixes){
   cedData.notes=newNotes;
 }
 
-// ── Visualiseur d'historique ─────────────────────────────
+// ── Impression papier de la cédule (usine affichée) ──────
+function baLogoSVG(){
+  // Logo BA noir et rouge, recréé en SVG (style des PDF de séquences)
+  return '<svg width="64" height="64" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
+    +'<rect x="6" y="6" width="88" height="14" fill="#d11f1f"/>'
+    +'<rect x="6" y="24" width="88" height="70" fill="#111"/>'
+    +'<text x="50" y="74" font-family="Arial Black,Arial,sans-serif" font-size="46" font-weight="900" fill="#fff" text-anchor="middle">BA</text>'
+    +'</svg>';
+}
+
+function cedPrint(){
+  var u = cedCurrentUsine || 'u1';
+  var uLabel = u.toUpperCase();
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('fr-CA',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var timeStr = now.toLocaleTimeString('fr-CA',{hour:'2-digit',minute:'2-digit'});
+
+  // Connexions (KPI)
+  var k = cedData.kpi||{};
+  var kAll=[{p:'u1p',a:'u1a',l:'Usine 1'},{p:'u2p',a:'u2a',l:'Usine 2'},{p:'u3p',a:'u3a',l:'Usine 3'}];
+  var kShow=(u==='u1')?kAll:kAll.filter(function(x){return x.l.toLowerCase().replace(' ','')===('usine'+u.slice(1));});
+  var cxHtml='';
+  kShow.forEach(function(km){
+    if(k[km.p]||k[km.a]) cxHtml+='<tr><td>'+km.l+'</td><td>'+(k[km.p]||0)+' jr</td><td>'+(k[km.a]||0)+' jr</td></tr>';
+  });
+
+  function dateCellPrint(v){
+    var dc=cedDateColor(v);
+    var lbl=fmtDate(v)||v||'';
+    if(!dc) return '<td>'+lbl+'</td>';
+    return '<td style="background:'+dc.bg+';color:'+dc.fg+';font-weight:700">'+lbl+'</td>';
+  }
+
+  // Machines CN
+  var machHtml='';
+  [{k:'drill',l:'Drill'},{k:'plasma',l:'Plasma'},{k:'angle',l:'Angleline'}].forEach(function(col){
+    var rows=(cedData.mach&&cedData.mach[col.k])||[];
+    rows.forEach(function(row,ri){
+      if(!row.proj||!row.proj.trim()) return;
+      var pct=(cedData.notes&&cedData.notes['mpct_'+col.k+'_'+ri]!==undefined)?parseInt(cedData.notes['mpct_'+col.k+'_'+ri]):Math.round(row.pct<=1?row.pct*100:row.pct);
+      var note=(cedData.notes&&cedData.notes['mnote_'+col.k+'_'+ri])||'';
+      machHtml+='<tr><td>'+col.l+'</td><td>'+row.proj+'</td>'+dateCellPrint(row.obj)+'<td>'+pct+'%</td><td>'+note+'</td></tr>';
+    });
+  });
+
+  // Tables Assemblage / Soudure
+  function tablePrint(sk, finKey){
+    var rows=cedData[sk]||[]; var out='';
+    rows.forEach(function(row,ri){
+      var proj=String(row['Projet']||''); if(!proj.trim()) return;
+      var pct=(cedData.notes&&cedData.notes['pct_'+sk+'_'+ri]!==undefined)?parseInt(cedData.notes['pct_'+sk+'_'+ri]):(parseInt(row['Avanc. Est.'])||0);
+      var comment=(cedData.notes&&cedData.notes['c_'+sk+'_'+ri])||'';
+      var poste=(cedData.notes&&cedData.notes['p_'+sk+'_'+ri])||'';
+      var fin=row[finKey]||row['Date fin prod']||row['Date fin prod.']||'';
+      var kg=parseInt(row['Poids projet'])||0; var lbs=kg?Math.round(kg*2.20462).toLocaleString()+' lbs':'';
+      out+='<tr><td>'+(ri+1)+'</td><td>'+proj+'</td>'+dateCellPrint(fin)+'<td>'+lbs+'</td><td>'+pct+'%</td><td>'+comment+'</td><td>'+poste+'</td></tr>';
+    });
+    return out;
+  }
+  var asmHtml=tablePrint('asm','Date fin prod');
+  var soudHtml=tablePrint('soud','DATE FIN PROD');
+
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cédule '+uLabel+'</title><style>'
+    +'*{box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:18px;color:#111;font-size:11px;}'
+    +'.hd{display:flex;align-items:center;gap:14px;border-bottom:3px solid #111;padding-bottom:10px;margin-bottom:14px;}'
+    +'.hd .ti{font-size:20px;font-weight:900;letter-spacing:1px;}'
+    +'.hd .sub{font-size:12px;color:#555;margin-top:2px;}'
+    +'h2{font-size:13px;background:#111;color:#fff;padding:5px 9px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.5px;}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:8px;}'
+    +'th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top;}'
+    +'th{background:#e8e8e8;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}'
+    +'.foot{margin-top:18px;font-size:9px;color:#888;text-align:center;border-top:1px solid #ccc;padding-top:8px;}'
+    +'@media print{body{padding:0;}h2{-webkit-print-color-adjust:exact;print-color-adjust:exact;}th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}td{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
+    +'</style></head><body>'
+    +'<div class="hd">'+baLogoSVG()+'<div><div class="ti">CÉDULE — '+uLabel+'</div><div class="sub">Construction Beauce Atlas · '+dateStr+' · '+timeStr+'</div></div></div>';
+
+  if(cxHtml) html+='<h2>Connexions disponibles</h2><table><tr><th>Usine</th><th>Plasma</th><th>Angleline</th></tr>'+cxHtml+'</table>';
+  if(machHtml) html+='<h2>Machines CN — Préparation</h2><table><tr><th>Machine</th><th>Projet</th><th>Objectif</th><th>%</th><th>Note</th></tr>'+machHtml+'</table>';
+  if(asmHtml) html+='<h2>Assemblage</h2><table><tr><th>#</th><th>Projet</th><th>Date fin</th><th>Poids</th><th>%</th><th>Commentaire</th><th>Poste bloquant</th></tr>'+asmHtml+'</table>';
+  if(soudHtml) html+='<h2>Soudure</h2><table><tr><th>#</th><th>Projet</th><th>Date fin</th><th>Poids</th><th>%</th><th>Commentaire</th><th>Poste bloquant</th></tr>'+soudHtml+'</table>';
+  if(!cxHtml&&!machHtml&&!asmHtml&&!soudHtml) html+='<p>Aucune donnée dans la cédule de cette usine.</p>';
+
+  html+='<div class="foot">Cédule en direct — Transition de quart · Construction Beauce Atlas · Imprimé le '+dateStr+' à '+timeStr+'</div>';
+  html+='</body></html>';
+
+  var w=window.open('','_blank');
+  if(!w){ alert('Le navigateur a bloqué la fenêtre d\'impression. Autorise les pop-ups pour ce site.'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(function(){ w.focus(); w.print(); }, 350);
+}
+
+// ── Bilan de quart : compare la cédule actuelle au snapshot du jour ──
+var _bilanText='';
+function shiftSummary(){
+  var u = cedCurrentUsine||'u1';
+  var modal=document.getElementById('bilan-modal');
+  var content=document.getElementById('bilan-content');
+  modal.style.display='flex';
+  content.textContent='Chargement du bilan...';
+  if(!sbConnected){
+    content.textContent = buildBilan(null);
+    _bilanText = content.textContent;
+    return;
+  }
+  sbClient.from('cedule_historique').select('jour,data').eq('usine',u).order('jour',{ascending:false}).limit(1).maybeSingle()
+    .then(function(res){
+      var baseline = (res&&res.data&&res.data.data) ? res.data.data : null;
+      _bilanText = buildBilan(baseline);
+      content.textContent = _bilanText;
+    })
+    .catch(function(){
+      _bilanText = buildBilan(null);
+      content.textContent = _bilanText;
+    });
+}
+
+function getPctFor(data, sk, ri, row){
+  if(data.notes && data.notes['pct_'+sk+'_'+ri]!==undefined) return parseInt(data.notes['pct_'+sk+'_'+ri]);
+  return parseInt(row['Avanc. Est.'])||0;
+}
+
+function buildBilan(baseline){
+  var u=cedCurrentUsine||'u1';
+  var now=new Date();
+  var L=[];
+  L.push('BILAN DE QUART \u2014 '+u.toUpperCase());
+  L.push(now.toLocaleDateString('fr-CA',{weekday:'long',day:'numeric',month:'long'})+' \u00b7 '+now.toLocaleTimeString('fr-CA',{hour:'2-digit',minute:'2-digit'}));
+  var by=gv('ced_nom'); if(by) L.push('Contrema\u00eetre : '+by);
+  L.push('\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500');
+
+  var baseIdx={};
+  if(baseline){
+    ['asm','soud'].forEach(function(sk){
+      (baseline[sk]||[]).forEach(function(row,ri){
+        var p=String(row['Projet']||'').trim(); if(!p)return;
+        baseIdx[sk+'|'+p]=getPctFor(baseline,sk,ri,row);
+      });
+    });
+  }
+
+  var advanced=[], completed=[], newBlocks=[], started=[];
+  ['asm','soud'].forEach(function(sk){
+    var lbl=sk==='asm'?'Asm':'Soud';
+    (cedData[sk]||[]).forEach(function(row,ri){
+      var p=String(row['Projet']||'').trim(); if(!p)return;
+      var pct=getPctFor(cedData,sk,ri,row);
+      var poste=(cedData.notes&&cedData.notes['p_'+sk+'_'+ri])||'';
+      var key=sk+'|'+p;
+      var basePct = baseIdx[key];
+      if(basePct===undefined){
+        if(pct>0) started.push(p+' ['+lbl+'] \u2192 '+pct+'%');
+      } else {
+        if(pct>=100 && basePct<100) completed.push(p+' ['+lbl+']');
+        else if(pct>basePct) advanced.push(p+' ['+lbl+'] '+basePct+'% \u2192 '+pct+'%');
+      }
+      if(poste.trim()) newBlocks.push(p+' ['+lbl+'] : '+poste);
+    });
+  });
+
+  if(!baseline){ L.push('(Pas de point de comparaison aujourd\'hui \u2014 \u00e9tat actuel)'); L.push(''); }
+  if(completed.length){ L.push('\u2713 TERMIN\u00c9 \u00c0 100% :'); completed.forEach(function(x){L.push('  \u2022 '+x);}); L.push(''); }
+  if(advanced.length){ L.push('\u25b2 A AVANC\u00c9 :'); advanced.forEach(function(x){L.push('  \u2022 '+x);}); L.push(''); }
+  if(started.length){ L.push('\u25cf NOUVEAU / D\u00c9MARR\u00c9 :'); started.forEach(function(x){L.push('  \u2022 '+x);}); L.push(''); }
+  if(newBlocks.length){ L.push('\u26d4 BLOCAGES / POSTES AFFECT\u00c9S :'); newBlocks.forEach(function(x){L.push('  \u2022 '+x);}); L.push(''); }
+  if(!completed.length && !advanced.length && !started.length && !newBlocks.length){ L.push('Aucun changement notable \u00e0 signaler.'); }
+  return L.join('\n');
+}
+
+function bilanCopy(btn){
+  if(navigator.clipboard && _bilanText){
+    navigator.clipboard.writeText(_bilanText).then(function(){
+      if(btn){ var old=btn.innerHTML; btn.innerHTML='\u2713 Copi\u00e9!'; setTimeout(function(){btn.innerHTML=old;},1500); }
+    });
+  }
+}
+
+function bilanEmail(){
+  var u=(cedCurrentUsine||'u1').toUpperCase();
+  var subj='Bilan de quart '+u+' \u2014 '+new Date().toLocaleDateString('fr-CA');
+  var body=encodeURIComponent(_bilanText||'');
+  window.location.href='mailto:?subject='+encodeURIComponent(subj)+'&body='+body;
+}
+
 var histData = {};
+// ── Tableau de bord 3 usines ─────────────────────────────
+function dashOpen(){
+  var modal=document.getElementById('dash-modal');
+  var content=document.getElementById('dash-content');
+  modal.style.display='flex';
+  content.innerHTML='<div style="color:#94a3b8;font-family:\'IBM Plex Mono\',monospace;font-size:12px">Chargement des 3 usines...</div>';
+  var results={};
+  var pending=3;
+  ['u1','u2','u3'].forEach(function(u){
+    function gotData(data){
+      results[u]=data;
+      pending--;
+      if(pending===0) dashRender(results);
+    }
+    if(sbConnected){
+      sbClient.from('cedules').select('data').eq('usine',u).maybeSingle()
+        .then(function(res){ gotData((res&&res.data&&res.data.data)?res.data.data:null); })
+        .catch(function(){ gotData(null); });
+    } else {
+      try{ var raw=localStorage.getItem(CED_KEY+'_'+u); gotData(raw?JSON.parse(raw):null); }
+      catch(e){ gotData(null); }
+    }
+  });
+}
+
+function dashStatsFor(data){
+  if(!data) return null;
+  var late=0, blocked=0, done=0, total=0, pctSum=0, pctCount=0;
+  ['asm','soud'].forEach(function(sk){
+    (data[sk]||[]).forEach(function(row,ri){
+      var p=String(row['Projet']||''); if(!p.trim())return;
+      total++;
+      var pct=(data.notes&&data.notes['pct_'+sk+'_'+ri]!==undefined)?parseInt(data.notes['pct_'+sk+'_'+ri]):(parseInt(row['Avanc. Est.'])||0);
+      pctSum+=pct; pctCount++;
+      if(pct>=100) done++;
+      var finKey=sk==='soud'?'DATE FIN PROD':'Date fin prod';
+      var fin=row[finKey]||row['Date fin prod']||row['Date fin prod.']||'';
+      var dc=cedDateColor(fin);
+      if(dc&&dc.fg==='#ef4444'&&pct<100) late++;
+      var poste=(data.notes&&data.notes['p_'+sk+'_'+ri])||'';
+      if(poste.trim()) blocked++;
+    });
+  });
+  var avg=pctCount?Math.round(pctSum/pctCount):0;
+  return {late:late, blocked:blocked, done:done, total:total, avg:avg, fresh:data._updatedAt, by:data._updatedBy};
+}
+
+function dashRender(results){
+  var content=document.getElementById('dash-content');
+  var h='<div class="dash-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+  [{u:'u1',l:'Usine 1',c:'#e8a020'},{u:'u2',l:'Usine 2',c:'#3b82f6'},{u:'u3',l:'Usine 3',c:'#a855f7'}].forEach(function(col){
+    var s=dashStatsFor(results[col.u]);
+    h+='<div style="background:#14171f;border:1px solid #333;border-top:3px solid '+col.c+';border-radius:8px;padding:12px">';
+    h+='<div style="font-family:\'IBM Plex Mono\',monospace;font-size:13px;font-weight:700;color:'+col.c+';margin-bottom:10px">'+col.l+'</div>';
+    if(!s){ h+='<div style="color:#64748b;font-size:11px;font-family:\'IBM Plex Mono\',monospace">Aucune cédule</div>'; }
+    else{
+      h+='<div style="display:flex;flex-direction:column;gap:7px;font-family:\'IBM Plex Mono\',monospace;font-size:12px">';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:#94a3b8">Avancement moyen</span><span style="color:#e2e8f0;font-weight:700">'+s.avg+'%</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:#94a3b8">Séquences</span><span style="color:#e2e8f0">'+s.total+'</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:#94a3b8">Terminées</span><span style="color:#22c55e">'+s.done+'</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:#94a3b8">En retard</span><span style="color:'+(s.late>0?'#ef4444':'#64748b')+';font-weight:'+(s.late>0?'700':'400')+'">'+s.late+'</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:#94a3b8">Bloquées</span><span style="color:'+(s.blocked>0?'#f59e0b':'#64748b')+';font-weight:'+(s.blocked>0?'700':'400')+'">'+s.blocked+'</span></div>';
+      // Fraîcheur
+      var ftxt='—';
+      if(s.fresh){ var mins=Math.round((Date.now()-new Date(s.fresh).getTime())/60000); ftxt = mins<60?(mins+' min'):mins<1440?(Math.round(mins/60)+'h'):(Math.round(mins/1440)+'j'); }
+      h+='<div style="display:flex;justify-content:space-between;border-top:1px solid #333;padding-top:6px;margin-top:2px"><span style="color:#94a3b8">Maj il y a</span><span style="color:#cbd5e1">'+ftxt+'</span></div>';
+      h+='</div>';
+    }
+    h+='</div>';
+  });
+  h+='</div>';
+  content.innerHTML=h;
+}
+
 function histOpen(){
   document.getElementById('hist-modal').style.display='flex';
   document.getElementById('hist-usine').value = cedCurrentUsine||'u1';
@@ -2382,9 +2682,88 @@ function cedRender() {
   cedRenderTable('soud', cedData.soud, ['Prio','Projet','D\u00e9but','Budget','Avanc. Est.','Poids projet','DATE FIN PROD','Remarques']);
   cedRenderKPI();
   cedRenderMach();
+  cedRenderBanner();
 }
 
-function cedPctColor(p){if(p>=100)return '#6b7a99';if(p>=80)return '#22c55e';if(p>=50)return '#facc15';if(p>=20)return '#f97316';return '#ef4444';}
+// ── Bannière : fraîcheur + alertes retards/blocages ──────
+function cedCountAlerts(){
+  var late=0, blocked=0, done=0, total=0;
+  ['asm','soud'].forEach(function(sk){
+    var arr=cedData[sk]||[];
+    arr.forEach(function(row,ri){
+      var proj=String(row['Projet']||''); if(!proj.trim()) return;
+      total++;
+      var pct=(cedData.notes&&cedData.notes['pct_'+sk+'_'+ri]!==undefined)?parseInt(cedData.notes['pct_'+sk+'_'+ri]):(parseInt(row['Avanc. Est.'])||0);
+      if(pct>=100) done++;
+      var finKey = sk==='soud' ? 'DATE FIN PROD' : 'Date fin prod';
+      var fin=row[finKey]||row['Date fin prod']||row['Date fin prod.']||'';
+      var dc=cedDateColor(fin);
+      if(dc && dc.fg==='#ef4444' && pct<100) late++;  // en retard et pas fini
+      var poste=(cedData.notes&&cedData.notes['p_'+sk+'_'+ri])||'';
+      if(poste.trim()) blocked++;
+    });
+  });
+  return {late:late, blocked:blocked, done:done, total:total};
+}
+
+function cedFreshness(){
+  var ts = cedData._updatedAt;
+  if(!ts) return null;
+  var d = new Date(ts);
+  if(isNaN(d.getTime())) return null;
+  var mins = Math.round((Date.now()-d.getTime())/60000);
+  var by = cedData._updatedBy||'';
+  var txt, col;
+  if(mins<60){ txt='il y a '+(mins<1?'moins d\'1 min':mins+' min'); }
+  else if(mins<1440){ txt='il y a '+Math.round(mins/60)+'h'; }
+  else { txt='il y a '+Math.round(mins/1440)+' j'; }
+  // Couleur de fraîcheur
+  if(mins<240) col='var(--green)';        // <4h = frais
+  else if(mins<720) col='var(--yellow)';  // <12h
+  else col='var(--red)';                   // vieux
+  return {txt:txt, by:by, col:col, mins:mins};
+}
+
+function cedRenderBanner(){
+  var el=document.getElementById('ced-banner'); if(!el) return;
+  var a=cedCountAlerts();
+  var f=cedFreshness();
+  var h='';
+  // Ligne d'alertes (retards / blocages)
+  var alertParts=[];
+  if(a.late>0) alertParts.push('<span style="color:#ef4444;font-weight:700">\u26a0 '+a.late+' en retard</span>');
+  if(a.blocked>0) alertParts.push('<span style="color:#f59e0b;font-weight:700">\u26d4 '+a.blocked+' poste'+(a.blocked>1?'s':'')+' bloqu\u00e9'+(a.blocked>1?'s':'')+'</span>');
+  if(a.total>0) alertParts.push('<span style="color:var(--dim)">'+a.done+'/'+a.total+' \u00e0 100%</span>');
+
+  var bgCol = (a.late>0)?'rgba(239,68,68,.10)':(a.blocked>0)?'rgba(245,158,11,.10)':'rgba(34,197,94,.08)';
+  var bdCol = (a.late>0)?'rgba(239,68,68,.35)':(a.blocked>0)?'rgba(245,158,11,.35)':'rgba(34,197,94,.25)';
+
+  h+='<div style="background:'+bgCol+';border:1px solid '+bdCol+';border-radius:8px;padding:7px 11px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
+  h+='<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12px;font-family:\'IBM Plex Mono\',monospace">'+(alertParts.length?alertParts.join(''):'<span style="color:var(--green)">\u2713 Aucune alerte</span>')+'</div>';
+  if(f){
+    h+='<div style="font-size:10px;color:'+f.col+';font-family:\'IBM Plex Mono\',monospace;white-space:nowrap">\u25cf Maj '+f.txt+(f.by?' \u00b7 '+f.by:'')+'</div>';
+  } else {
+    h+='<div style="font-size:10px;color:var(--dim);font-family:\'IBM Plex Mono\',monospace">\u25cb Pas encore de modification</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+// Couleur d'une date objectif : rouge=en retard, orange pâle=aujourd'hui, vert=plus tard
+// Retourne {bg, fg} ou null si pas de date valide
+function cedDateColor(dateVal){
+  if(!dateVal) return null;
+  var d=new Date(dateVal);
+  if(isNaN(d.getTime())) return null;
+  var today=new Date();
+  today.setHours(0,0,0,0);
+  var target=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  var diff=Math.round((target-today)/(24*3600*1000));
+  if(diff<0) return {bg:'rgba(239,68,68,.18)', fg:'#ef4444'};      // hier ou avant = rouge
+  if(diff===0) return {bg:'rgba(249,140,32,.18)', fg:'#f59e0b'};   // aujourd'hui = orange pâle
+  return {bg:'rgba(34,197,94,.15)', fg:'#22c55e'};                 // plus tard = vert
+}
+
 
 function cedRenderTable(sk, rows, cols) {
   var tbl=document.getElementById('ctbl-'+sk); if(!tbl||!rows.length){if(tbl)tbl.innerHTML='';return;}
@@ -2395,14 +2774,14 @@ function cedRenderTable(sk, rows, cols) {
   if(mgrMode) h+='<th style="color:var(--dim)">Ordre / Suppr.</th>';
   h+='</tr></thead><tbody>';
   rows.forEach(function(row,ri){
-    var prio=parseInt(row['Prio'])||0;
+    var prio=ri+1; // renumérotation chronologique : toujours 1,2,3...
     var pc=prio===1?'p1':prio===2?'p2':prio===3?'p3':'';
     h+='<tr>';
     cols.forEach(function(c){
       var v=row[c];
       if(c==='Prio'){
-        if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+(v||'')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\'Prio\',this)" style="width:40px;text-align:center"></td>';
-        else h+='<td><span class="prio-badge '+pc+'">'+(v||'')+'</span></td>';
+        // Affiche toujours le rang chronologique (1,2,3...), non éditable
+        h+='<td><span class="prio-badge '+pc+'">'+prio+'</span></td>';
       }
       else if(c==='Projet'){
         if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+String(v||'').replace(/"/g,'&quot;')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\'Projet\',this)" style="width:120px"></td>';
@@ -2427,7 +2806,11 @@ function cedRenderTable(sk, rows, cols) {
       }
       else if(c==='Date fin prod'||c==='DATE FIN PROD'){
         if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+String(v||'').replace(/"/g,'&quot;')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\''+c+'\',this)" style="width:80px" placeholder="15-mai"></td>';
-        else h+='<td style="font-size:11px;color:var(--dim)">'+(v||'—')+'</td>';
+        else {
+          var dc=cedDateColor(v);
+          if(dc) h+='<td style="font-size:11px"><span style="background:'+dc.bg+';color:'+dc.fg+';padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap">'+(fmtDate(v)||v)+'</span></td>';
+          else h+='<td style="font-size:11px;color:var(--dim)">'+(v||'—')+'</td>';
+        }
       }
       else{h+='<td style="font-size:11px;color:var(--dim)">'+(v||'—')+'</td>';}
     });
@@ -2500,7 +2883,9 @@ function cedRenderMach(){
         h+='<div style="display:flex;gap:3px;align-items:center;margin-bottom:5px"><span style="font-size:10px;color:var(--dim)">Obj:</span><input class="ed-inp" type="text" value="'+String(row.obj||'').replace(/"/g,'&quot;')+'" oninput="mgrEditMach(\''+col.k+'\','+ri+',\'obj\',this)" placeholder="27-avr" style="flex:1;min-width:0;font-size:10px"></div>';
       } else {
         h+='<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;font-weight:700;color:var(--bright);margin-bottom:3px;word-break:break-word;line-height:1.3">'+row.proj+'</div>';
-        h+='<div style="font-size:10px;color:var(--dim);margin-bottom:5px">&#9654; Obj : '+dateLabel+'</div>';
+        var mdc=cedDateColor(row.obj);
+        if(mdc) h+='<div style="font-size:10px;margin-bottom:5px">&#9654; Obj : <span style="background:'+mdc.bg+';color:'+mdc.fg+';padding:1px 6px;border-radius:4px;font-weight:600">'+dateLabel+'</span></div>';
+        else h+='<div style="font-size:10px;color:var(--dim);margin-bottom:5px">&#9654; Obj : '+dateLabel+'</div>';
       }
       h+='<div style="display:flex;align-items:center;gap:5px">';
       h+='<input type="number" min="0" max="100" value="'+savedPct+'"';
@@ -3240,10 +3625,7 @@ function toggleTheme(){var l=document.body.classList.toggle('light');document.ge
 
 function startupPickCed(u) {
   document.getElementById('startup-modal').style.display = 'none';
-  cedUsineCtx = u || 'u1';
-  cedCurrentUsine = u || 'u1';
-  cedPickUsine(u);
-  showView('ced');
+  navUsine(u || 'u1');
 }
 
 function startupPick(u) {
@@ -3377,6 +3759,32 @@ function cedLoadShared(u) {
   }
 })();
 </script>
+<!-- TABLEAU DE BORD 3 USINES MODAL -->
+<div id="dash-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1e2130;border:1px solid #333;border-radius:12px;max-width:900px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="padding:14px 16px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:700;color:#e2e8f0">&#128202; Tableau de bord \u2014 3 usines</span>
+      <button onclick="document.getElementById('dash-modal').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+    <div id="dash-content" style="padding:16px;overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
+<!-- BILAN DE QUART MODAL -->
+<div id="bilan-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1e2130;border:1px solid #333;border-radius:12px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="padding:14px 16px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:700;color:#e2e8f0">&#128203; Bilan de quart</span>
+      <button onclick="document.getElementById('bilan-modal').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+    <div id="bilan-content" style="padding:16px;overflow-y:auto;flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#cbd5e1;white-space:pre-wrap;line-height:1.55"></div>
+    <div style="padding:10px 16px;border-top:1px solid #333;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="bilanEmail()" style="background:rgba(59,130,246,.15);border:1px solid #3b82f6;color:#3b82f6;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">&#9993; Courriel</button>
+      <button id="bilan-copy-btn" onclick="bilanCopy(this)" style="background:rgba(34,197,94,.15);border:1px solid #22c55e;color:#22c55e;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;font-weight:600">&#128203; Copier</button>
+    </div>
+  </div>
+</div>
+
 <!-- HISTORIQUE MODAL -->
 <div id="hist-modal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:20px">
   <div style="background:#1e2130;border:1px solid #333;border-radius:12px;max-width:900px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5)">
