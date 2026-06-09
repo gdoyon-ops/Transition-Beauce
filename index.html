@@ -2751,6 +2751,8 @@ function cedRenderBanner(){
 
 // Couleur d'une date objectif : rouge=en retard, orange pâle=aujourd'hui, vert=plus tard
 // Retourne {bg, fg} ou null si pas de date valide
+function cedPctColor(p){if(p>=100)return '#6b7a99';if(p>=80)return '#22c55e';if(p>=50)return '#facc15';if(p>=20)return '#f97316';return '#ef4444';}
+
 function cedDateColor(dateVal){
   if(!dateVal) return null;
   var d=new Date(dateVal);
