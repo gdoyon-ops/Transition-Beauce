@@ -910,6 +910,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           <div style="height:8px"></div>
           <div class="ced-stack-sec"><div class="ced-stack-title">Assemblage</div><div class="ced-tbl-wrap"><table class="ced-tbl" id="ctbl-asm"></table></div></div>
           <div class="ced-stack-sec"><div class="ced-stack-title">Soudure</div><div class="ced-tbl-wrap"><table class="ced-tbl" id="ctbl-soud"></table></div></div>
+          <div class="ced-stack-sec" id="ced_custom_sec" style="display:none"><div class="ced-stack-title">Baie de fabrication custom</div><div id="ced_custom_body"></div></div>
         </div>
         <div id="ced-empty" class="ced-empty">
           <div style="font-size:28px;margin-bottom:8px">&#128196;</div>
@@ -961,18 +962,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     <div class="sec">
       <div class="sh" onclick="tog('ced_sect')"><span class="si">&#128295;</span><span class="st">4 · Situation par secteur</span><span class="sb b-blu">QUALITATIF</span><span class="sec-ts" id="ts_ced_sect"></span><span class="cv" id="ced_sect_cv">&#9660;</span></div>
       <div class="sbody" id="ced_sect">
-        <div class="scard"><div class="sc-head"><div class="sc-dot" style="background:#38bdf8"></div><div class="sc-name">D&#233;bitage (Scie)</div></div>
-          <div class="fw"><div class="fr"><textarea id="ced_deb_b" rows="2" placeholder="Blocages, décisions, poste affecté..."></textarea><button class="mic" onclick="doMic('ced_deb_b',this,'u1')">&#127908;</button></div></div>
-        </div>
-        <div class="scard"><div class="sc-head"><div class="sc-dot" style="background:#a78bfa"></div><div class="sc-name">Baie 2 (Plasma / Angleline)</div></div>
-          <div class="fw"><div class="fr"><textarea id="ced_b2_b" rows="2" placeholder="Blocages, décisions, poste affecté..."></textarea><button class="mic" onclick="doMic('ced_b2_b',this,'u1')">&#127908;</button></div></div>
-        </div>
-        <div class="scard"><div class="sc-head"><div class="sc-dot" style="background:#34d399"></div><div class="sc-name" id="ced_sect_asm_lbl">Assemblage / Soudure</div></div>
-          <div class="fw"><div class="fr"><textarea id="ced_asm_b" rows="2" placeholder="Blocages, décisions, poste affecté..."></textarea><button class="mic" onclick="doMic('ced_asm_b',this,'u1')">&#127908;</button></div></div>
-        </div>
-        <div class="scard"><div class="sc-head"><div class="sc-dot" style="background:#fb923c"></div><div class="sc-name" id="ced_sect_b3_lbl">Baie 3 / Grosses pi&#232;ces</div></div>
-          <div class="fw"><div class="fr"><textarea id="ced_b3_b" rows="2" placeholder="Blocages, décisions, poste affecté..."></textarea><button class="mic" onclick="doMic('ced_b3_b',this,'u1')">&#127908;</button></div></div>
-        </div>
+        <div id="ced_sect_cards"></div>
       </div>
     </div>
 
@@ -1517,18 +1507,21 @@ function doMic(fid, btn, u) {
     return;
   }
   var SR = window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert('Chrome ou Edge requis pour la dictée. Sur iPhone, utilise le bouton 🎤 du clavier après avoir appuyé sur un champ texte.');return;}
+  if(!SR){alert('Chrome ou Edge requis pour la dictée. Sur iPhone, utilise le bouton \ud83c\udfa4 du clavier après avoir appuyé sur un champ texte.');return;}
   if(recog&&micFld===fid){recog.stop();return;}
   if(recog) recog.stop();
-  recog=new SR(); recog.lang='fr-CA'; recog.continuous=false; recog.interimResults=false;
+  recog=new SR(); recog.lang='fr-CA'; recog.continuous=true; recog.interimResults=true;
   micBt=btn; micFld=fid; btn.classList.add('on'); btn.innerHTML='&#9209;';
+  var baseVal = (document.getElementById(fid)||{}).value || '';
   recog.onresult=function(e){
-    var t = applyCorr(e.results[0][0].transcript, u);
+    var finalT='';
+    for(var i=0;i<e.results.length;i++){ if(e.results[i].isFinal) finalT+=e.results[i][0].transcript+' '; }
+    var t = applyCorr(finalT.trim(), u);
     var el=document.getElementById(fid);
-    if(el){el.value=el.value?el.value+' '+t:t; el.dispatchEvent(new Event('input'));}
+    if(el){el.value = baseVal ? baseVal+' '+t : t; el.dispatchEvent(new Event('input'));}
   };
   recog.onend=function(){btn.classList.remove('on');btn.innerHTML='&#127908;';micBt=micFld=recog=null;};
-  recog.onerror=function(e){btn.classList.remove('on');btn.innerHTML='&#127908;';if(e.error!=='no-speech')alert('Micro: '+e.error);micBt=micFld=recog=null;};
+  recog.onerror=function(e){btn.classList.remove('on');btn.innerHTML='&#127908;';if(e.error==='not-allowed'||e.error==='service-not-allowed')alert('Micro bloqué. Autorise le micro pour ce site dans les réglages du navigateur (icône cadenas dans la barre d\'adresse).');else if(e.error!=='no-speech'&&e.error!=='aborted')alert('Micro: '+e.error);micBt=micFld=recog=null;};
   recog.start();
 }
 
@@ -1835,6 +1828,63 @@ var CED_SECTEUR_LABELS = {
   u3: {asm:'Assemblage / Soudure', b3:'Baie 3 / Grosses pieces', volAsm:'Assemblage', volSoud:'Soudure', volB3:'Baie 3', bpp:'recus par l\'Usine 3', bppBadge:'RÉCEPTION U3'}
 };
 
+// Configuration des secteurs par usine (Situation par secteur)
+// Chaque secteur : {id, nom, couleur}
+var CED_SECTEURS = {
+  u1: [
+    {id:'deb', nom:'D\u00e9bitage (Scie)', col:'#38bdf8'},
+    {id:'b2',  nom:'Baie 2 (Plasma / Angleline)', col:'#a78bfa'},
+    {id:'asm', nom:'Assemblage / Soudure', col:'#34d399'},
+    {id:'b3',  nom:'Baie 3 / Grosses pi\u00e8ces', col:'#fb923c'}
+  ],
+  u2: [
+    {id:'deb', nom:'D\u00e9bitage (Scie)', col:'#38bdf8'},
+    {id:'b2',  nom:'Baie Nord (Assemblage / Soudure)', col:'#a78bfa'},
+    {id:'asm', nom:'Baie Sud (Assemblage / Soudure)', col:'#34d399'},
+    {id:'peint', nom:'Peinture (applicateur 3 usines)', col:'#f472b6'},
+    {id:'b3',  nom:'Entrep\u00f4t int\u00e9rieur', col:'#fb923c'}
+  ],
+  u3: [
+    {id:'deb', nom:'D\u00e9bitage (Scie)', col:'#38bdf8'},
+    {id:'cnx', nom:'Connexions', col:'#a78bfa'},
+    {id:'asm', nom:'Assemblage / Soudure', col:'#34d399'}
+  ]
+};
+
+function cedRenderSecteurs(u){
+  var cont = document.getElementById('ced_sect_cards');
+  if(!cont) return;
+  var secs = CED_SECTEURS[u] || CED_SECTEURS.u1;
+  var h='';
+  secs.forEach(function(s){
+    var tid = 'ced_'+s.id+'_b';
+    h+='<div class="scard"><div class="sc-head"><div class="sc-dot" style="background:'+s.col+'"></div><div class="sc-name">'+s.nom+'</div></div>';
+    h+='<div class="fw"><div class="fr"><textarea id="'+tid+'" rows="2" placeholder="Blocages, d\u00e9cisions, poste affect\u00e9..." oninput="cedSectSave()"></textarea><button class="mic" onclick="doMic(\''+tid+'\',this,\''+u+'\')">\ud83c\udfa4</button></div></div>';
+    h+='</div>';
+  });
+  cont.innerHTML = h;
+  // Restaurer les valeurs sauvegardées
+  cedSectRestore(u);
+}
+
+// Sauvegarde des secteurs dans cedData.notes (clé sect_<id>)
+function cedSectSave(){
+  if(!cedData.notes) cedData.notes={};
+  var u = cedCurrentUsine||'u1';
+  (CED_SECTEURS[u]||[]).forEach(function(s){
+    var el=document.getElementById('ced_'+s.id+'_b');
+    if(el) cedData.notes['sect_'+s.id]=el.value;
+  });
+  cedSaveLocal();
+}
+function cedSectRestore(u){
+  if(!cedData.notes) return;
+  (CED_SECTEURS[u]||[]).forEach(function(s){
+    var el=document.getElementById('ced_'+s.id+'_b');
+    if(el) el.value = cedData.notes['sect_'+s.id]||'';
+  });
+}
+
 function cedPickUsine(u) {
   cedUsineCtx = u;
   cedCurrentUsine = u; // keep in sync for save/load
@@ -1843,6 +1893,7 @@ function cedPickUsine(u) {
   });
   // Update labels based on usine
   var lbl = CED_SECTEUR_LABELS[u] || CED_SECTEUR_LABELS.u1;
+  cedRenderSecteurs(u);
   var el;
   el=document.getElementById('ced_sect_asm_lbl'); if(el)el.textContent=lbl.asm;
   el=document.getElementById('ced_sect_b3_lbl');  if(el)el.textContent=lbl.b3;
@@ -2012,7 +2063,10 @@ function sbStartAutoRefresh(){
 
 // ── Archivage quotidien automatique ──────────────────────
 function todayStr(){
+  // La journée de travail roule à 5h du matin (personne ne travaille avant).
+  // Avant 5h, on considère que c'est encore la journée précédente.
   var d=new Date();
+  d.setHours(d.getHours()-5);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
@@ -2192,7 +2246,7 @@ function cedPrint(){
       var comment=(cedData.notes&&cedData.notes['c_'+sk+'_'+ri])||'';
       var poste=(cedData.notes&&cedData.notes['p_'+sk+'_'+ri])||'';
       var fin=row[finKey]||row['Date fin prod']||row['Date fin prod.']||'';
-      var kg=parseInt(row['Poids projet'])||0; var lbs=kg?Math.round(kg*2.20462).toLocaleString()+' lbs':'';
+      var kg=parseFloat(String(row['Poids projet']).replace(',','.'))||0; var lbs=kg?((kg%1===0?kg:kg.toFixed(2))+' kg'):'';
       out+='<tr><td>'+(ri+1)+'</td><td>'+proj+'</td>'+dateCellPrint(fin)+'<td>'+lbs+'</td><td>'+pct+'%</td><td>'+comment+'</td><td>'+poste+'</td></tr>';
     });
     return out;
@@ -2200,27 +2254,51 @@ function cedPrint(){
   var asmHtml=tablePrint('asm','Date fin prod');
   var soudHtml=tablePrint('soud','DATE FIN PROD');
 
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cédule '+uLabel+'</title><style>'
-    +'*{box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:18px;color:#111;font-size:11px;}'
+  function pageHeader(sectionTitle){
+    return '<div class="hd">'+baLogoSVG()+'<div><div class="ti">C\u00c9DULE \u2014 '+uLabel+'</div><div class="sub">Construction Beauce Atlas \u00b7 '+sectionTitle+' \u00b7 '+dateStr+'</div></div></div>';
+  }
+  function pageFooter(){
+    return '<div class="foot">Construction Beauce Atlas \u00b7 Transition de quart \u00b7 Imprim\u00e9 le '+dateStr+' \u00e0 '+timeStr+'</div>';
+  }
+
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>C\u00e9dule '+uLabel+'</title><style>'
+    +'@page{size:legal;margin:12mm;}'
+    +'*{box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;color:#111;font-size:11px;}'
+    +'.page{padding:0;page-break-after:always;break-after:page;}'
+    +'.page:last-child{page-break-after:auto;break-after:auto;}'
     +'.hd{display:flex;align-items:center;gap:14px;border-bottom:3px solid #111;padding-bottom:10px;margin-bottom:14px;}'
-    +'.hd .ti{font-size:20px;font-weight:900;letter-spacing:1px;}'
+    +'.hd .ti{font-size:22px;font-weight:900;letter-spacing:1px;}'
     +'.hd .sub{font-size:12px;color:#555;margin-top:2px;}'
-    +'h2{font-size:13px;background:#111;color:#fff;padding:5px 9px;margin:16px 0 6px;text-transform:uppercase;letter-spacing:.5px;}'
-    +'table{width:100%;border-collapse:collapse;margin-bottom:8px;}'
-    +'th,td{border:1px solid #999;padding:4px 6px;text-align:left;vertical-align:top;}'
+    +'h2{font-size:14px;background:#111;color:#fff;padding:6px 10px;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.5px;}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:10px;}'
+    +'th,td{border:1px solid #999;padding:5px 7px;text-align:left;vertical-align:top;}'
     +'th{background:#e8e8e8;font-size:10px;text-transform:uppercase;letter-spacing:.3px;}'
-    +'.foot{margin-top:18px;font-size:9px;color:#888;text-align:center;border-top:1px solid #ccc;padding-top:8px;}'
-    +'@media print{body{padding:0;}h2{-webkit-print-color-adjust:exact;print-color-adjust:exact;}th{-webkit-print-color-adjust:exact;print-color-adjust:exact;}td{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
-    +'</style></head><body>'
-    +'<div class="hd">'+baLogoSVG()+'<div><div class="ti">CÉDULE — '+uLabel+'</div><div class="sub">Construction Beauce Atlas · '+dateStr+' · '+timeStr+'</div></div></div>';
+    +'.foot{margin-top:14px;font-size:9px;color:#888;text-align:center;border-top:1px solid #ccc;padding-top:8px;}'
+    +'@media print{body{padding:0;}h2,th,td{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}'
+    +'</style></head><body>';
 
+  // ===== PAGE 1 : Connexions + Préparation (machines CN) =====
+  html+='<div class="page">'+pageHeader('Pr\u00e9paration');
   if(cxHtml) html+='<h2>Connexions disponibles</h2><table><tr><th>Usine</th><th>Plasma</th><th>Angleline</th></tr>'+cxHtml+'</table>';
-  if(machHtml) html+='<h2>Machines CN — Préparation</h2><table><tr><th>Machine</th><th>Projet</th><th>Objectif</th><th>%</th><th>Note</th></tr>'+machHtml+'</table>';
-  if(asmHtml) html+='<h2>Assemblage</h2><table><tr><th>#</th><th>Projet</th><th>Date fin</th><th>Poids</th><th>%</th><th>Commentaire</th><th>Poste bloquant</th></tr>'+asmHtml+'</table>';
-  if(soudHtml) html+='<h2>Soudure</h2><table><tr><th>#</th><th>Projet</th><th>Date fin</th><th>Poids</th><th>%</th><th>Commentaire</th><th>Poste bloquant</th></tr>'+soudHtml+'</table>';
-  if(!cxHtml&&!machHtml&&!asmHtml&&!soudHtml) html+='<p>Aucune donnée dans la cédule de cette usine.</p>';
+  html+='<h2>Pr\u00e9paration \u2014 Machines CN</h2>';
+  if(machHtml) html+='<table><tr><th>Machine</th><th>Projet</th><th>Objectif</th><th>%</th><th>Note</th></tr>'+machHtml+'</table>';
+  else html+='<table><tr><th>Machine</th><th>Projet</th><th>Objectif</th><th>%</th><th>Note</th></tr><tr><td>Drill</td><td colspan="4" style="color:#888">\u2014</td></tr><tr><td>Plasma</td><td colspan="4" style="color:#888">\u2014</td></tr><tr><td>Angleline</td><td colspan="4" style="color:#888">\u2014</td></tr></table>';
+  html+=pageFooter()+'</div>';
 
-  html+='<div class="foot">Cédule en direct — Transition de quart · Construction Beauce Atlas · Imprimé le '+dateStr+' à '+timeStr+'</div>';
+  // ===== PAGE 2 : Assemblage =====
+  html+='<div class="page">'+pageHeader('Assemblage');
+  html+='<h2>Assemblage</h2>';
+  if(asmHtml) html+='<table><tr><th>#</th><th>Projet</th><th>Date fin</th><th>Poids</th><th>%</th><th>Commentaire</th><th>Poste bloquant</th></tr>'+asmHtml+'</table>';
+  else html+='<p style="color:#888">Aucune s\u00e9quence en assemblage.</p>';
+  html+=pageFooter()+'</div>';
+
+  // ===== PAGE 3 : Soudure =====
+  html+='<div class="page">'+pageHeader('Soudure');
+  html+='<h2>Soudure</h2>';
+  if(soudHtml) html+='<table><tr><th>#</th><th>Projet</th><th>Date fin</th><th>Poids</th><th>%</th><th>Commentaire</th><th>Poste bloquant</th></tr>'+soudHtml+'</table>';
+  else html+='<p style="color:#888">Aucune s\u00e9quence en soudure.</p>';
+  html+=pageFooter()+'</div>';
+
   html+='</body></html>';
 
   var w=window.open('','_blank');
@@ -2687,6 +2765,7 @@ function cedRender() {
   cedRenderKPI();
   cedRenderMach();
   cedRenderBanner();
+  cedRenderCustom();
 }
 
 // ── Bannière : fraîcheur + alertes retards/blocages ──────
@@ -2808,7 +2887,7 @@ function cedRenderTable(sk, rows, cols) {
       else if(c==='Budget'){h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim)">'+(v||'')+'h</td>';}
       else if(c==='Poids projet'){
         if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+(v||'')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\'Poids projet\',this)" style="width:60px"></td>';
-        else {var kg=parseInt(v)||0;var lbs=Math.round(kg*2.20462);h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim)">'+(kg?lbs.toLocaleString()+' lbs':'—')+'</td>';}
+        else {var kg=parseFloat(String(v).replace(',','.'))||0;var disp=kg?(kg%1===0?kg:kg.toFixed(2))+' kg':'\u2014';h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim)">'+disp+'</td>';}
       }
       else if(c==='Date fin prod'||c==='DATE FIN PROD'){
         if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+String(v||'').replace(/"/g,'&quot;')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\''+c+'\',this)" style="width:80px" placeholder="15-mai"></td>';
@@ -2823,7 +2902,7 @@ function cedRenderTable(sk, rows, cols) {
     // Commentaire quart
     var ck='c_'+sk+'_'+ri;
     var cv=((cedData.notes&&cedData.notes[ck])||'').replace(/"/g,'&quot;');
-    h+='<td style="min-width:160px"><div class="note-cell"><textarea class="note-inp" rows="2" placeholder="Commentaire..." data-nk="'+ck+'" oninput="cedSaveNote(this)">'+cv+'</textarea><button class="mic" onclick="cedMic(this,\''+ck+'\')">&#127908;</button></div></td>';
+    h+='<td style="min-width:160px"><div class="note-cell"><textarea class="note-inp" rows="2" placeholder="Commentaire..." data-nk="'+ck+'" oninput="cedSaveNote(this)">'+cv+'</textarea><button class="mic" onclick="cedMic(this,\''+ck+'\')">&#127908;</button>'+cedPhotoBtn('ph_'+sk+'_'+ri)+'</div>'+cedPhotoThumb('ph_'+sk+'_'+ri)+'</td>';
     // Poste bloquant
     var pk='p_'+sk+'_'+ri;
     var pv=((cedData.notes&&cedData.notes[pk])||'').replace(/"/g,'&quot;');
@@ -2866,7 +2945,13 @@ function cedRenderMach(){
     if(mgrMode) h+=' <button onclick="mgrAddMach(\''+col.k+'\')" style="background:rgba(34,197,94,.15);border:1px solid var(--green);color:var(--green);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:13px;font-weight:700;margin-left:6px">+</button>';
     h+='</div>';
     if(!rows.length && !mgrMode){
-      h+='<div style="font-size:11px;color:var(--dim);padding:8px 0">—</div>';
+      var nsk='nostock_'+col.k;
+      var nsv=((cedData.notes&&cedData.notes[nsk])||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      h+='<div class="mach-row" style="border:1px dashed var(--border)">';
+      h+='<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:5px">\u26a0 NO STOCK</div>';
+      h+='<div class="note-cell"><textarea class="note-inp" rows="2" placeholder="Note (raison, en attente...)..." data-nk="'+nsk+'" oninput="cedSaveNote(this)" style="font-size:11px;min-width:0">'+nsv+'</textarea>';
+      h+='<button class="mic" onclick="cedMic(this,\''+nsk+'\')" style="width:28px;height:28px;min-width:28px;font-size:11px">\ud83c\udfa4</button></div>';
+      h+='</div>';
     }
     rows.forEach(function(row,ri){
       if(!mgrMode && (!row.proj || !row.proj.trim())) return; // skip empty rows (view mode only)
@@ -2958,17 +3043,21 @@ function cedMic(btn,noteKey){
     return;
   }
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert('Chrome ou Edge requis.');return;}
+  if(!SR){alert('Chrome ou Edge requis pour la dict\u00e9e. Sur iPhone, utilise le bouton \ud83c\udfa4 du clavier.');return;}
   if(recog){recog.stop();return;}
-  recog=new SR();recog.lang='fr-CA';recog.continuous=false;recog.interimResults=false;
+  recog=new SR();recog.lang='fr-CA';recog.continuous=true;recog.interimResults=true;
   btn.classList.add('on');btn.innerHTML='&#9209;';
+  var ta0=document.querySelector('textarea[data-nk="'+noteKey+'"]');
+  var baseVal=ta0?ta0.value:'';
   recog.onresult=function(e){
-    var t=applyCorr(e.results[0][0].transcript,'u1');
+    var finalT='';
+    for(var i=0;i<e.results.length;i++){ if(e.results[i].isFinal) finalT+=e.results[i][0].transcript+' '; }
+    var t=applyCorr(finalT.trim(),'u1');
     var ta=document.querySelector('textarea[data-nk="'+noteKey+'"]');
-    if(ta){ta.value=ta.value?ta.value+' '+t:t;cedData.notes[noteKey]=ta.value;cedSaveLocal();}
+    if(ta){ta.value=baseVal?baseVal+' '+t:t;if(!cedData.notes)cedData.notes={};cedData.notes[noteKey]=ta.value;cedSaveLocal();}
   };
   recog.onend=function(){btn.classList.remove('on');btn.innerHTML='&#127908;';recog=null;};
-  recog.onerror=function(){btn.classList.remove('on');btn.innerHTML='&#127908;';recog=null;};
+  recog.onerror=function(e){btn.classList.remove('on');btn.innerHTML='&#127908;';if(e.error==='not-allowed'||e.error==='service-not-allowed')alert('Micro bloqu\u00e9. Autorise le micro pour ce site (ic\u00f4ne cadenas dans la barre d\'adresse).');else if(e.error!=='no-speech'&&e.error!=='aborted')alert('Micro: '+e.error);recog=null;};
   recog.start();
 }
 
@@ -3002,6 +3091,147 @@ function toggleMgrMode(){
   btn.style.borderColor='var(--green)';
   btn.style.color='var(--green)';
   cedRender(); // re-render avec boutons d'édition
+}
+
+// #9 — Baie de fabrication CUSTOM (gestionnaire, U1 et U2 seulement)
+// Le gestionnaire crée les projets/séquences avec début, fin, budget d'heures.
+function mgrAddCustom(){
+  if(!mgrMode) return;
+  var proj = prompt('Projet / s\u00e9quence custom (ex: 1520:CUSTOM) :');
+  if(!proj || !proj.trim()) return;
+  var debut = prompt('D\u00e9but de fabrication (ex: 12-mai) :') || '';
+  var fin = prompt('Fin de fabrication (ex: 20-mai) :') || '';
+  var budget = prompt('Budget d\'heures :') || '';
+  var poids = prompt('Poids (kg) \u2014 optionnel :') || '';
+  if(!cedData.custom) cedData.custom=[];
+  cedData.custom.push({proj:proj.trim(), debut:debut, fin:fin, budget:budget, poids:poids, pct:0, note:''});
+  cedSaveLocal();
+  cedRender();
+}
+function mgrDelCustom(ri){
+  if(!mgrMode) return;
+  if(!cedData.custom||!cedData.custom[ri]) return;
+  if(!confirm('Supprimer "'+cedData.custom[ri].proj+'" de la baie custom?')) return;
+  cedData.custom.splice(ri,1);
+  cedSaveLocal();
+  cedRender();
+}
+function mgrEditCustom(ri, field, el){
+  if(!mgrMode) return;
+  if(!cedData.custom||!cedData.custom[ri]) return;
+  cedData.custom[ri][field]=el.value;
+  cedSaveLocal();
+}
+function cedCustomPct(ri, el){
+  if(!cedData.custom||!cedData.custom[ri]) return;
+  cedData.custom[ri].pct = Math.min(100,Math.max(0,parseInt(el.value)||0));
+  cedSaveLocal();
+}
+function cedCustomNote(ri, el){
+  if(!cedData.custom||!cedData.custom[ri]) return;
+  cedData.custom[ri].note = el.value;
+  cedSaveLocal();
+}
+
+// #4 — Photos inline (petit icône appareil photo, comme le micro)
+// Stockées dans cedData.photos[key] = {data, ts}. Auto-effacées après 48h.
+function cedPhotoBtn(key){
+  return '<button class="mic" onclick="cedPhotoPick(\''+key+'\')" title="Ajouter une photo" style="width:28px;height:28px;min-width:28px;font-size:12px">\ud83d\udcf7</button>';
+}
+function cedPhotoPick(key){
+  var inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.capture='environment';
+  inp.onchange=function(){
+    var f=inp.files[0]; if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+      if(!cedData.photos) cedData.photos={};
+      // Compresser via canvas pour limiter la taille
+      var img=new Image();
+      img.onload=function(){
+        var max=900; var w=img.width,h=img.height;
+        if(w>max||h>max){ if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;} }
+        var cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        var data=cv.toDataURL('image/jpeg',0.7);
+        cedData.photos[key]={data:data, ts:Date.now()};
+        cedSaveLocal(); cedRender();
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(f);
+  };
+  inp.click();
+}
+function cedPhotoThumb(key){
+  if(!cedData.photos||!cedData.photos[key]) return '';
+  var p=cedData.photos[key];
+  return '<div style="margin-top:4px;position:relative;display:inline-block"><img src="'+p.data+'" style="max-width:80px;max-height:80px;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="cedPhotoView(\''+key+'\')"><button onclick="cedPhotoDel(\''+key+'\')" style="position:absolute;top:-6px;right:-6px;background:var(--red);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">\u00d7</button></div>';
+}
+function cedPhotoView(key){
+  if(!cedData.photos||!cedData.photos[key]) return;
+  var w=window.open('','_blank');
+  w.document.write('<img src="'+cedData.photos[key].data+'" style="max-width:100%">');
+}
+function cedPhotoDel(key){
+  if(!cedData.photos) return;
+  delete cedData.photos[key];
+  cedSaveLocal(); cedRender();
+}
+// Nettoyage des photos de plus de 48h
+function cedPhotoCleanup(){
+  if(!cedData.photos) return;
+  var now=Date.now(); var DAY2=48*3600*1000; var changed=false;
+  Object.keys(cedData.photos).forEach(function(k){
+    if(cedData.photos[k] && cedData.photos[k].ts && (now-cedData.photos[k].ts)>=DAY2){
+      delete cedData.photos[k]; changed=true;
+    }
+  });
+  if(changed){ cedSaveLocal(); cedRender(); }
+}
+
+function cedRenderCustom(){
+  var sec=document.getElementById('ced_custom_sec');
+  var cont=document.getElementById('ced_custom_body');
+  if(!sec||!cont) return;
+  var u=cedCurrentUsine||'u1';
+  // Visible seulement pour U1 et U2
+  if(u!=='u1' && u!=='u2'){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  var rows=cedData.custom||[];
+  var h='';
+  if(mgrMode){
+    h+='<div style="margin-bottom:8px"><button class="ced-btn dl" style="background:rgba(34,197,94,.1);color:var(--green);border-color:rgba(34,197,94,.3)" onclick="mgrAddCustom()">\u2795 Ajouter projet custom</button></div>';
+  }
+  if(!rows.length){
+    h+='<div style="font-size:11px;color:var(--dim);padding:6px 0">Aucun projet en baie custom.'+(mgrMode?'':' (Le gestionnaire peut en ajouter.)')+'</div>';
+    cont.innerHTML=h; return;
+  }
+  h+='<div class="ced-tbl-wrap"><table class="ced-tbl"><thead><tr><th>Projet</th><th>D\u00e9but</th><th>Fin</th><th>Budget h</th><th>Poids</th><th>Avanc.</th><th style="color:var(--accent)">Note</th>'+(mgrMode?'<th></th>':'')+'</tr></thead><tbody>';
+  rows.forEach(function(row,ri){
+    h+='<tr>';
+    if(mgrMode){
+      h+='<td><input class="ed-inp" type="text" value="'+(row.proj||'').replace(/"/g,'&quot;')+'" oninput="mgrEditCustom('+ri+',\'proj\',this)" style="width:110px"></td>';
+      h+='<td><input class="ed-inp" type="text" value="'+(row.debut||'').replace(/"/g,'&quot;')+'" oninput="mgrEditCustom('+ri+',\'debut\',this)" style="width:70px"></td>';
+      h+='<td><input class="ed-inp" type="text" value="'+(row.fin||'').replace(/"/g,'&quot;')+'" oninput="mgrEditCustom('+ri+',\'fin\',this)" style="width:70px"></td>';
+      h+='<td><input class="ed-inp" type="text" value="'+(row.budget||'').replace(/"/g,'&quot;')+'" oninput="mgrEditCustom('+ri+',\'budget\',this)" style="width:60px"></td>';
+      h+='<td><input class="ed-inp" type="text" value="'+(row.poids||'').replace(/"/g,'&quot;')+'" oninput="mgrEditCustom('+ri+',\'poids\',this)" style="width:60px"></td>';
+    } else {
+      var fdc=cedDateColor(row.fin);
+      h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-weight:700">'+(row.proj||'')+'</td>';
+      h+='<td style="font-size:11px;color:var(--dim)">'+(row.debut||'\u2014')+'</td>';
+      h+='<td style="font-size:11px">'+(fdc?'<span style="background:'+fdc.bg+';color:'+fdc.fg+';padding:2px 6px;border-radius:4px">'+(row.fin||'')+'</span>':(row.fin||'\u2014'))+'</td>';
+      h+='<td style="font-size:11px;color:var(--dim)">'+(row.budget?row.budget+'h':'\u2014')+'</td>';
+      h+='<td style="font-size:11px;color:var(--dim)">'+(row.poids?row.poids+' kg':'\u2014')+'</td>';
+    }
+    var pct=parseInt(row.pct)||0; var col=cedPctColor(pct);
+    h+='<td><input type="number" min="0" max="100" value="'+pct+'" oninput="cedCustomPct('+ri+',this)" style="width:52px;background:var(--bg);border:1px solid var(--border);color:'+col+';font-family:\'IBM Plex Mono\',monospace;font-weight:700;padding:4px;border-radius:5px;text-align:center"></td>';
+    h+='<td><input class="ed-inp" type="text" value="'+(row.note||'').replace(/"/g,'&quot;')+'" placeholder="Note..." oninput="cedCustomNote('+ri+',this)" style="width:130px"></td>';
+    if(mgrMode) h+='<td><button onclick="mgrDelCustom('+ri+')" style="background:rgba(239,68,68,.12);border:1px solid var(--red);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer">\ud83d\uddd1</button></td>';
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  cont.innerHTML=h;
 }
 
 function mgrAddProj(sk){
@@ -3758,6 +3988,8 @@ function cedLoadShared(u) {
     setInterval(sbDailyArchive, 6*3600*1000);   // re-vérifie aux 6h (si app reste ouverte)
     setInterval(ced100Cleanup, 10*60*1000);     // vérifie les 100% aux 10 min
     setTimeout(ced100Cleanup, 5000);            // une 1re passe au démarrage
+    setInterval(cedPhotoCleanup, 30*60*1000);   // nettoie photos >48h aux 30 min
+    setTimeout(cedPhotoCleanup, 6000);
   } else {
     sbStatus('\u26a0 Mode local (base partag\u00e9e non disponible)','var(--yellow)');
     setInterval(ced100Cleanup, 10*60*1000);
