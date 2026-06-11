@@ -908,8 +908,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           <div style="height:8px"></div>
           <div class="mach-sec"><div class="mach-head">Machines CN — Avancement par projet</div><div class="mach-grid" id="ced-mach"></div></div>
           <div style="height:8px"></div>
-          <div class="ced-stack-sec"><div class="ced-stack-title">Assemblage</div><div class="ced-tbl-wrap"><table class="ced-tbl" id="ctbl-asm"></table></div></div>
-          <div class="ced-stack-sec"><div class="ced-stack-title">Soudure</div><div class="ced-tbl-wrap"><table class="ced-tbl" id="ctbl-soud"></table></div></div>
+          <div class="ced-stack-sec"><div class="ced-stack-title">Assemblage <span id="mgr-add-asm"></span></div><div class="ced-tbl-wrap"><table class="ced-tbl" id="ctbl-asm"></table></div></div>
+          <div class="ced-stack-sec"><div class="ced-stack-title">Soudure <span id="mgr-add-soud"></span></div><div class="ced-tbl-wrap"><table class="ced-tbl" id="ctbl-soud"></table></div></div>
           <div class="ced-stack-sec" id="ced_custom_sec" style="display:none"><div class="ced-stack-title">Baie de fabrication custom</div><div id="ced_custom_body"></div></div>
         </div>
         <div id="ced-empty" class="ced-empty">
@@ -2761,11 +2761,17 @@ function cedRender() {
   if(fnEl && cedData.fileName) fnEl.textContent = cedData.fileName;
   if(!show) return;
   cedRenderTable('asm',  cedData.asm,  ['Prio','Projet','D\u00e9but','Budget','Avanc. Est.','Poids projet','Date fin prod','Remarques']);
-  cedRenderTable('soud', cedData.soud, ['Prio','Projet','D\u00e9but','Budget','Avanc. Est.','Poids projet','DATE FIN PROD','Remarques']);
+  cedRenderTable('soud', cedData.soud, ['Prio','Projet','D\u00e9but','Budget','Avanc. Est.','Poids projet','Date fin prod','Remarques']);
   cedRenderKPI();
   cedRenderMach();
   cedRenderBanner();
   cedRenderCustom();
+  // Boutons + inline pour Assemblage / Soudure en mode gestionnaire
+  var btnA=document.getElementById('mgr-add-asm');
+  var btnS=document.getElementById('mgr-add-soud');
+  var addBtn=function(sk){return '<button onclick="mgrAddProj(\''+sk+'\')" style="background:rgba(34,197,94,.15);border:1px solid var(--green);color:var(--green);border-radius:4px;padding:1px 9px;cursor:pointer;font-size:14px;font-weight:700;margin-left:6px;vertical-align:middle">+</button>';};
+  if(btnA) btnA.innerHTML = mgrMode ? addBtn('asm') : '';
+  if(btnS) btnS.innerHTML = mgrMode ? addBtn('soud') : '';
 }
 
 // ── Bannière : fraîcheur + alertes retards/blocages ──────
