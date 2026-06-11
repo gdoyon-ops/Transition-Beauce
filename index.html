@@ -2281,7 +2281,7 @@ function cedPrint(){
   }
 
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>C\u00e9dule '+uLabel+'</title><style>'
-    +'@page{size:legal landscape;margin:10mm;}'
+    +'@page{size:8.5in 14in landscape;margin:10mm;}'
     +'*{box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;color:#111;font-size:11px;}'
     +'.page{padding:0;page-break-after:always;break-after:page;}'
     +'.page:last-child{page-break-after:auto;break-after:auto;}'
@@ -3195,7 +3195,7 @@ function cedPhotoBtn(key){
 }
 function cedPhotoPick(key){
   var inp=document.createElement('input');
-  inp.type='file'; inp.accept='image/*'; inp.capture='environment';
+  inp.type='file'; inp.accept='image/*';
   inp.onchange=function(){
     var f=inp.files[0]; if(!f) return;
     var reader=new FileReader();
