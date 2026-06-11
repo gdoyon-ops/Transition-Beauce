@@ -2226,16 +2226,35 @@ function cedPrint(){
   }
 
   // Machines CN
-  var machHtml='';
-  [{k:'drill',l:'Drill'},{k:'plasma',l:'Plasma'},{k:'angle',l:'Angleline'}].forEach(function(col){
-    var rows=(cedData.mach&&cedData.mach[col.k])||[];
+  // Machines CN en 3 colonnes (Drill / Plasma / Angleline) comme dans l'app
+  function machColCells(mk){
+    var rows=(cedData.mach&&cedData.mach[mk])||[];
+    var cells='';
     rows.forEach(function(row,ri){
       if(!row.proj||!row.proj.trim()) return;
-      var pct=(cedData.notes&&cedData.notes['mpct_'+col.k+'_'+ri]!==undefined)?parseInt(cedData.notes['mpct_'+col.k+'_'+ri]):Math.round(row.pct<=1?row.pct*100:row.pct);
-      var note=(cedData.notes&&cedData.notes['mnote_'+col.k+'_'+ri])||'';
-      machHtml+='<tr><td>'+col.l+'</td><td>'+row.proj+'</td>'+dateCellPrint(row.obj)+'<td>'+pct+'%</td><td>'+note+'</td></tr>';
+      var pct=(cedData.notes&&cedData.notes['mpct_'+mk+'_'+ri]!==undefined)?parseInt(cedData.notes['mpct_'+mk+'_'+ri]):Math.round(row.pct<=1?row.pct*100:row.pct);
+      var note=(cedData.notes&&cedData.notes['mnote_'+mk+'_'+ri])||'';
+      var objStr=String(row.obj||'');
+      var d=new Date(objStr);
+      var dateLabel=isNaN(d.getTime())?objStr:d.toLocaleDateString('fr-CA',{month:'short',day:'numeric'});
+      var dc=cedDateColor(row.obj);
+      var dateHtml=dc?'<span style="background:'+dc.bg+';color:'+dc.fg+';padding:1px 5px;border-radius:3px;font-weight:700">'+dateLabel+'</span>':dateLabel;
+      cells+='<div style="border-bottom:1px solid #ccc;padding:5px 0;margin-bottom:4px">';
+      cells+='<div style="font-weight:700;font-family:monospace">'+row.proj+'</div>';
+      cells+='<div style="font-size:10px;color:#555">Obj: '+dateHtml+' &nbsp; <b>'+pct+'%</b></div>';
+      if(note) cells+='<div style="font-size:10px;color:#333;margin-top:2px">'+note+'</div>';
+      cells+='</div>';
     });
-  });
+    if(!cells) cells='<div style="color:#888;padding:6px 0">\u2014 aucune s\u00e9quence \u2014</div>';
+    return cells;
+  }
+  var machHtml='<table style="table-layout:fixed"><tr>'
+    +'<th style="width:33.33%;color:#3b82f6">DRILL</th>'
+    +'<th style="width:33.33%;color:#a855f7">PLASMA</th>'
+    +'<th style="width:33.33%;color:#14b8a6">ANGLELINE</th></tr>'
+    +'<tr><td style="vertical-align:top">'+machColCells('drill')+'</td>'
+    +'<td style="vertical-align:top">'+machColCells('plasma')+'</td>'
+    +'<td style="vertical-align:top">'+machColCells('angle')+'</td></tr></table>';
 
   // Tables Assemblage / Soudure
   function tablePrint(sk, finKey){
@@ -2252,7 +2271,7 @@ function cedPrint(){
     return out;
   }
   var asmHtml=tablePrint('asm','Date fin prod');
-  var soudHtml=tablePrint('soud','DATE FIN PROD');
+  var soudHtml=tablePrint('soud','Date fin prod');
 
   function pageHeader(sectionTitle){
     return '<div class="hd">'+baLogoSVG()+'<div><div class="ti">C\u00c9DULE \u2014 '+uLabel+'</div><div class="sub">Construction Beauce Atlas \u00b7 '+sectionTitle+' \u00b7 '+dateStr+'</div></div></div>';
@@ -2262,7 +2281,7 @@ function cedPrint(){
   }
 
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>C\u00e9dule '+uLabel+'</title><style>'
-    +'@page{size:legal;margin:12mm;}'
+    +'@page{size:legal landscape;margin:10mm;}'
     +'*{box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0;color:#111;font-size:11px;}'
     +'.page{padding:0;page-break-after:always;break-after:page;}'
     +'.page:last-child{page-break-after:auto;break-after:auto;}'
@@ -2280,9 +2299,7 @@ function cedPrint(){
   // ===== PAGE 1 : Connexions + Préparation (machines CN) =====
   html+='<div class="page">'+pageHeader('Pr\u00e9paration');
   if(cxHtml) html+='<h2>Connexions disponibles</h2><table><tr><th>Usine</th><th>Plasma</th><th>Angleline</th></tr>'+cxHtml+'</table>';
-  html+='<h2>Pr\u00e9paration \u2014 Machines CN</h2>';
-  if(machHtml) html+='<table><tr><th>Machine</th><th>Projet</th><th>Objectif</th><th>%</th><th>Note</th></tr>'+machHtml+'</table>';
-  else html+='<table><tr><th>Machine</th><th>Projet</th><th>Objectif</th><th>%</th><th>Note</th></tr><tr><td>Drill</td><td colspan="4" style="color:#888">\u2014</td></tr><tr><td>Plasma</td><td colspan="4" style="color:#888">\u2014</td></tr><tr><td>Angleline</td><td colspan="4" style="color:#888">\u2014</td></tr></table>';
+  html+='<h2>Pr\u00e9paration \u2014 Machines CN</h2>'+machHtml;
   html+=pageFooter()+'</div>';
 
   // ===== PAGE 2 : Assemblage =====
@@ -3293,7 +3310,7 @@ function mgrAddProj(sk){
     'Remarques': ''
   };
   if(sk==='asm') newRow['Date fin prod']=fin;
-  if(sk==='soud') newRow['DATE FIN PROD']=fin;
+  if(sk==='soud') newRow['Date fin prod']=fin;
   cedData[sk].push(newRow);
   cedSaveLocal();
   cedRender();
