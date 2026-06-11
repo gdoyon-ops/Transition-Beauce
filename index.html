@@ -2246,7 +2246,7 @@ function cedPrint(){
       var comment=(cedData.notes&&cedData.notes['c_'+sk+'_'+ri])||'';
       var poste=(cedData.notes&&cedData.notes['p_'+sk+'_'+ri])||'';
       var fin=row[finKey]||row['Date fin prod']||row['Date fin prod.']||'';
-      var kg=parseFloat(String(row['Poids projet']).replace(',','.'))||0; var lbs=kg?((kg%1===0?kg:kg.toFixed(2))+' kg'):'';
+      var t=parseFloat(String(row['Poids projet']).replace(',','.'))||0; var lbs=t?(Math.round(t*2000).toLocaleString()+' lbs'):'';
       out+='<tr><td>'+(ri+1)+'</td><td>'+proj+'</td>'+dateCellPrint(fin)+'<td>'+lbs+'</td><td>'+pct+'%</td><td>'+comment+'</td><td>'+poste+'</td></tr>';
     });
     return out;
@@ -2887,7 +2887,7 @@ function cedRenderTable(sk, rows, cols) {
       else if(c==='Budget'){h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim)">'+(v||'')+'h</td>';}
       else if(c==='Poids projet'){
         if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+(v||'')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\'Poids projet\',this)" style="width:60px"></td>';
-        else {var kg=parseFloat(String(v).replace(',','.'))||0;var disp=kg?(kg%1===0?kg:kg.toFixed(2))+' kg':'\u2014';h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim)">'+disp+'</td>';}
+        else {var t=parseFloat(String(v).replace(',','.'))||0;var disp=t?Math.round(t*2000).toLocaleString()+' lbs':'\u2014';h+='<td style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--dim)">'+disp+'</td>';}
       }
       else if(c==='Date fin prod'||c==='DATE FIN PROD'){
         if(mgrMode) h+='<td><input class="ed-inp" type="text" value="'+String(v||'').replace(/"/g,'&quot;')+'" oninput="mgrEditField(\''+sk+'\','+ri+',\''+c+'\',this)" style="width:80px" placeholder="15-mai"></td>';
@@ -3124,8 +3124,40 @@ function mgrEditCustom(ri, field, el){
 }
 function cedCustomPct(ri, el){
   if(!cedData.custom||!cedData.custom[ri]) return;
-  cedData.custom[ri].pct = Math.min(100,Math.max(0,parseInt(el.value)||0));
+  var pct=Math.min(100,Math.max(0,parseInt(el.value)||0));
+  cedData.custom[ri].pct=pct;
+  var col=cedPctColor(pct);
+  el.style.color=col;
+  var fill=document.getElementById('cpf_'+ri);
+  if(fill){ fill.style.width=pct+'%'; fill.style.background=col; }
   cedSaveLocal();
+}
+
+// Barre d'avancement draggable pour la baie custom
+function startDragCustom(e, ri){
+  e.preventDefault();
+  var bar=document.getElementById('cpb_'+ri);
+  if(!bar) return;
+  function getPct(ev){
+    var touch=ev.touches?ev.touches[0]:ev;
+    var rect=bar.getBoundingClientRect();
+    var x=touch.clientX-rect.left;
+    return Math.min(100,Math.max(0,Math.round(x/rect.width*100)));
+  }
+  function apply(ev){
+    var pct=getPct(ev);
+    var col=cedPctColor(pct);
+    var fill=document.getElementById('cpf_'+ri);
+    if(fill){ fill.style.width=pct+'%'; fill.style.background=col; }
+    var inp=document.getElementById('cpi_'+ri);
+    if(inp){ inp.value=pct; inp.style.color=col; }
+    if(cedData.custom&&cedData.custom[ri]){ cedData.custom[ri].pct=pct; cedSaveLocal(); }
+  }
+  apply(e);
+  function onMove(ev){ apply(ev); }
+  function onUp(){ document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); document.removeEventListener('touchmove',onMove); document.removeEventListener('touchend',onUp); }
+  document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+  document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onUp);
 }
 function cedCustomNote(ri, el){
   if(!cedData.custom||!cedData.custom[ri]) return;
@@ -3225,7 +3257,10 @@ function cedRenderCustom(){
       h+='<td style="font-size:11px;color:var(--dim)">'+(row.poids?row.poids+' kg':'\u2014')+'</td>';
     }
     var pct=parseInt(row.pct)||0; var col=cedPctColor(pct);
-    h+='<td><input type="number" min="0" max="100" value="'+pct+'" oninput="cedCustomPct('+ri+',this)" style="width:52px;background:var(--bg);border:1px solid var(--border);color:'+col+';font-family:\'IBM Plex Mono\',monospace;font-weight:700;padding:4px;border-radius:5px;text-align:center"></td>';
+    h+='<td><div style="display:flex;align-items:center;gap:6px;min-width:150px"><input type="number" min="0" max="100" value="'+pct+'" oninput="cedCustomPct('+ri+',this)" id="cpi_'+ri+'" style="width:52px;background:var(--bg);border:1px solid var(--border);color:'+col+';font-family:\'IBM Plex Mono\',monospace;font-weight:700;padding:4px;border-radius:5px;text-align:center">';
+    h+='<div class="pct-drag-bar" id="cpb_'+ri+'" style="flex:1;height:14px;background:var(--card2);border-radius:7px;overflow:hidden;cursor:pointer;position:relative;touch-action:none" onmousedown="startDragCustom(event,'+ri+')" ontouchstart="startDragCustom(event,'+ri+')">';
+    h+='<div id="cpf_'+ri+'" style="height:100%;width:'+pct+'%;background:'+col+';border-radius:7px;transition:width .1s,background .1s;pointer-events:none"></div>';
+    h+='</div></div></td>';
     h+='<td><input class="ed-inp" type="text" value="'+(row.note||'').replace(/"/g,'&quot;')+'" placeholder="Note..." oninput="cedCustomNote('+ri+',this)" style="width:130px"></td>';
     if(mgrMode) h+='<td><button onclick="mgrDelCustom('+ri+')" style="background:rgba(239,68,68,.12);border:1px solid var(--red);color:var(--red);border-radius:5px;padding:3px 7px;cursor:pointer">\ud83d\uddd1</button></td>';
     h+='</tr>';
